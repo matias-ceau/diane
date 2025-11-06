@@ -10,6 +10,9 @@ from .config import config
 from .record import Record
 from .storage import Storage
 from .sync import GitSync
+from .encryption import GPGEncryption, setup_gpg_key
+from .export import Exporter
+from .stats import Statistics
 
 
 @click.command()
@@ -28,6 +31,12 @@ from .sync import GitSync
 @click.option('--sync', is_flag=True, help='Sync records with remote (pull + push)')
 @click.option('--remote-status', is_flag=True, help='Show git remote status')
 @click.option('--tui', is_flag=True, help='Launch interactive TUI dashboard')
+@click.option('--gpg-list-keys', is_flag=True, help='List available GPG keys')
+@click.option('--gpg-setup', is_flag=True, help='Setup GPG encryption interactively')
+@click.option('--decrypt', 'decrypt_file', help='Decrypt a specific record file')
+@click.option('--export', 'export_format', type=click.Choice(['json', 'csv', 'html', 'markdown']), help='Export records to format')
+@click.option('--export-file', help='Output file for export (default: stdout)')
+@click.option('--stats', is_flag=True, help='Show statistics about your records')
 def main(
     text: Optional[str],
     tags: Optional[str],
@@ -44,6 +53,12 @@ def main(
     sync: bool,
     remote_status: bool,
     tui: bool,
+    gpg_list_keys: bool,
+    gpg_setup: bool,
+    decrypt_file: Optional[str],
+    export_format: Optional[str],
+    export_file: Optional[str],
+    stats: bool,
 ):
     """diane, - Externalized mental records clerk.
 
@@ -74,6 +89,45 @@ def main(
     if tui:
         from .tui import launch_tui
         launch_tui()
+        return
+
+    # GPG operations
+    if gpg_list_keys:
+        encryptor = GPGEncryption()
+        keys = encryptor.list_keys()
+        if not keys:
+            click.echo("❌ No GPG keys found. Generate one with: gpg --gen-key")
+            return
+
+        click.echo("🔑 Available GPG keys:")
+        click.echo("─" * 60)
+        for key in keys:
+            click.echo(f"Key ID: {key['key_id']}")
+            click.echo(f"   User: {key['uid']}")
+            click.echo()
+        return
+
+    if gpg_setup:
+        setup_gpg_key()
+        return
+
+    if decrypt_file:
+        encryptor = GPGEncryption()
+        from pathlib import Path
+        filepath = Path(decrypt_file)
+
+        if not filepath.exists():
+            click.echo(f"❌ File not found: {filepath}", err=True)
+            sys.exit(1)
+
+        click.echo(f"Decrypting {filepath.name}...")
+        success, msg = encryptor.decrypt_file(filepath)
+
+        if success:
+            click.echo(f"✅ {msg}")
+        else:
+            click.echo(f"❌ {msg}", err=True)
+            sys.exit(1)
         return
 
     storage = Storage()
@@ -164,6 +218,76 @@ def main(
 
             for record in results[:limit]:
                 _display_record(record)
+        return
+
+    # Export mode
+    if export_format:
+        # Get all records (or filtered)
+        since = None
+        if today:
+            since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        results = storage.list_records(limit=None, since=since)
+
+        if not results:
+            click.echo("No records to export.")
+            return
+
+        # Generate export
+        if export_format == 'json':
+            content = Exporter.to_json(results)
+        elif export_format == 'csv':
+            content = Exporter.to_csv(results)
+        elif export_format == 'html':
+            content = Exporter.to_html(results)
+        elif export_format == 'markdown':
+            content = Exporter.to_markdown(results)
+
+        # Output
+        if export_file:
+            from pathlib import Path
+            Exporter.save_export(content, Path(export_file))
+            click.echo(f"✅ Exported {len(results)} records to {export_file}")
+        else:
+            click.echo(content)
+        return
+
+    # Statistics mode
+    if stats:
+        records = storage.list_records(limit=None)
+        if not records:
+            click.echo("No records found.")
+            return
+
+        statistics = Statistics(records)
+        summary = statistics.summary()
+
+        click.echo("📊 Record Statistics")
+        click.echo("─" * 60)
+        click.echo(f"Total Records: {summary['total_records']}")
+        click.echo(f"Total Words: {summary['total_words']}")
+        click.echo(f"Avg Words/Record: {summary['avg_words_per_record']}")
+        click.echo(f"Unique Tags: {summary['unique_tags']}")
+        click.echo()
+
+        if summary['busiest_day']:
+            click.echo(f"Busiest Day: {summary['busiest_day']} ({summary['busiest_day_count']} records)")
+            click.echo()
+
+        if summary['top_tags']:
+            click.echo("Top Tags:")
+            for tag, count in summary['top_tags']:
+                click.echo(f"  • {tag}: {count}")
+            click.echo()
+
+        # Show recent activity
+        recent = statistics.recent_activity(days=7)
+        if recent:
+            click.echo("Last 7 Days:")
+            for date_str, count in recent.items():
+                bar = '█' * count
+                click.echo(f"  {date_str}: {bar} {count}")
+
         return
 
     # List mode

@@ -405,3 +405,268 @@ Found a bug? Have a feature idea? Visit the [GitHub repository](https://github.c
 ---
 
 *"Always listening, never interrupting, never forgetting."* — Diane's Law
+
+---
+
+## 🔐 Encryption (v0.2.0)
+
+### GPG Encryption
+
+Protect sensitive records with GPG encryption:
+
+```bash
+# Setup GPG key (interactive)
+diane, --gpg-setup
+
+# Or set environment variable
+export DIANE_GPG_KEY="your-key-id"
+
+# Encrypt a record
+echo "Sensitive information" | diane, --encrypt
+
+# Result: creates an encrypted .gpg file
+# ~/.local/share/diane/records/2025-11-06--13-45-12--sensitive-information.md.gpg
+```
+
+### Managing Keys
+
+```bash
+# List available GPG keys
+diane, --gpg-list-keys
+
+# Output:
+# 🔑 Available GPG keys:
+# ────────────────────────────────────────────────────────────
+# Key ID: ABC123DEF456
+#    User: Your Name <your@email.com>
+```
+
+### Decrypting Records
+
+```bash
+# Decrypt a specific file
+diane, --decrypt ~/.local/share/diane/records/2025-11-06--13-45-12--sensitive.md.gpg
+
+# Output:
+# Decrypting 2025-11-06--13-45-12--sensitive.md.gpg...
+# ✅ Decrypted to 2025-11-06--13-45-12--sensitive.md
+```
+
+**Note:** Encrypted records are stored with `.gpg` extension and are not searchable without decryption first.
+
+---
+
+## 📤 Export & Integration (v0.2.0)
+
+Export your records for use with other tools, backup, or analysis.
+
+### Export Formats
+
+**JSON** - Perfect for programmatic access:
+```bash
+# Export all records to JSON
+diane, --export json
+
+# Save to file
+diane, --export json --export-file records.json
+
+# Export only today's records
+diane, --export json --today --export-file today.json
+```
+
+**CSV** - Great for spreadsheet analysis:
+```bash
+# Export to CSV
+diane, --export csv --export-file records.csv
+
+# Import into Excel, Google Sheets, etc.
+```
+
+**HTML** - Beautiful web-ready format:
+```bash
+# Generate styled HTML page
+diane, --export html --export-file records.html
+
+# Open in browser:
+# open records.html  # macOS
+# xdg-open records.html  # Linux
+```
+
+**Markdown** - Single consolidated document:
+```bash
+# Export all records to one markdown file
+diane, --export markdown --export-file all-records.md
+```
+
+### Integration Examples
+
+**Share records via email:**
+```bash
+# Export and email
+diane, --export html --export-file /tmp/records.html
+echo "Here are my notes" | mail -s "My Records" -a /tmp/records.html friend@example.com
+```
+
+**Backup to cloud:**
+```bash
+# Export and upload to cloud storage
+diane, --export json --export-file ~/Dropbox/diane-backup-$(date +%Y%m%d).json
+```
+
+**Import into other tools:**
+```bash
+# Export JSON for processing
+diane, --export json | jq '.[] | select(.tags[] | contains("work"))'
+```
+
+---
+
+## 📊 Statistics & Analytics (v0.2.0)
+
+Get insights into your recording habits and content.
+
+### View Statistics
+
+```bash
+diane, --stats
+```
+
+**Output:**
+```
+📊 Record Statistics
+────────────────────────────────────────────────────────────
+Total Records: 156
+Total Words: 12,483
+Avg Words/Record: 80.0
+Unique Tags: 23
+
+Busiest Day: 2025-10-15 (18 records)
+
+Top Tags:
+  • work/meetings: 42
+  • dev/python: 31
+  • personal/journal: 24
+  • ideas: 19
+  • bugs: 12
+
+Last 7 Days:
+  2025-10-30: ████ 4
+  2025-10-31: ██████ 6
+  2025-11-01: ███ 3
+  2025-11-02: ████████ 8
+  2025-11-03: █████ 5
+  2025-11-04: ██ 2
+  2025-11-05: ███████ 7
+```
+
+### Use Cases for Statistics
+
+**Track productivity:**
+- Monitor daily recording habits
+- Identify productive periods
+- See which topics you focus on most
+
+**Analyze content:**
+- Track word count trends
+- Identify most-used tags
+- Spot patterns in your thinking
+
+**Set goals:**
+- Aim for consistent daily records
+- Balance different topic areas
+- Build recording habits
+
+---
+
+## 🔗 Advanced Workflows (v0.2.0)
+
+### Encrypted Backup Workflow
+
+```bash
+# Encrypt all sensitive records
+export DIANE_GPG_KEY="your-key-id"
+echo "Confidential meeting notes" | diane, --encrypt --tags work/confidential
+
+# Sync to remote (encrypted files go to GitHub)
+diane, --sync
+
+# On another device, pull and decrypt
+diane, --pull
+diane, --decrypt ~/.local/share/diane/records/2025-11-06--14-20-30--confidential.md.gpg
+```
+
+### Export and Analyze Workflow
+
+```bash
+# Export all work notes to JSON
+diane, --export json --export-file work-notes.json
+
+# Analyze with jq
+cat work-notes.json | jq '[.[] | select(.tags[] | contains("work"))] | length'
+
+# Find most common words in work notes
+cat work-notes.json | jq -r '.[] | select(.tags[] | contains("work")) | .content' | \
+  tr ' ' '\n' | sort | uniq -c | sort -rn | head -20
+```
+
+### Daily Summary Workflow
+
+```bash
+# Create daily summaries
+alias daily-summary='diane, --list --today --export html --export-file ~/summaries/$(date +%Y-%m-%d).html'
+
+# Run at end of day
+daily-summary
+
+# Build a searchable archive of daily summaries
+```
+
+### Statistics-Driven Review
+
+```bash
+# Weekly review script
+#!/bin/bash
+echo "=== Weekly diane, Review ===" > /tmp/weekly-review.txt
+diane, --stats >> /tmp/weekly-review.txt
+diane, --list --limit 50 >> /tmp/weekly-review.txt
+cat /tmp/weekly-review.txt | less
+```
+
+---
+
+## 🎯 Complete Feature Matrix
+
+| Feature | Command | Since |
+|---------|---------|-------|
+| **Recording** |
+| Silent recording | `echo "text" \| diane,` | v0.1.0 |
+| Interactive mode | `diane,` | v0.1.0 |
+| With tags | `--tags work,urgent` | v0.1.0 |
+| Encrypted | `--encrypt` | v0.2.0 |
+| **Search & Browse** |
+| Exact search | `--search "keyword"` | v0.1.0 |
+| Fuzzy search | `--search "keyword" --fuzzy` | v0.1.0 |
+| List records | `--list` | v0.1.0 |
+| Today's records | `--list --today` | v0.1.0 |
+| TUI browser | `--tui` | v0.1.0 |
+| **Sync & Backup** |
+| Set remote | `--set-remote <url>` | v0.1.0 |
+| Push to remote | `--push` | v0.1.0 |
+| Pull from remote | `--pull` | v0.1.0 |
+| Full sync | `--sync` | v0.1.0 |
+| Remote status | `--remote-status` | v0.1.0 |
+| **Export** |
+| Export JSON | `--export json` | v0.2.0 |
+| Export CSV | `--export csv` | v0.2.0 |
+| Export HTML | `--export html` | v0.2.0 |
+| Export Markdown | `--export markdown` | v0.2.0 |
+| **Encryption** |
+| List GPG keys | `--gpg-list-keys` | v0.2.0 |
+| Setup GPG | `--gpg-setup` | v0.2.0 |
+| Decrypt file | `--decrypt <file>` | v0.2.0 |
+| **Analytics** |
+| Statistics | `--stats` | v0.2.0 |
+
+---
+
+*"Always listening, never interrupting, never forgetting."* — Diane's Law

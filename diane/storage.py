@@ -8,6 +8,7 @@ import subprocess
 
 from .config import config
 from .record import Record
+from .encryption import GPGEncryption
 
 
 class Storage:
@@ -74,10 +75,19 @@ class Storage:
         # Write the record
         content = record.to_markdown()
 
-        if encrypt and config.gpg_key_id:
-            # TODO: Implement GPG encryption
-            # For now, just save unencrypted
-            filepath.write_text(content, encoding='utf-8')
+        if encrypt:
+            # Encrypt with GPG
+            encryptor = GPGEncryption()
+            if not encryptor.is_available():
+                # Fall back to unencrypted if GPG not available
+                filepath.write_text(content, encoding='utf-8')
+            else:
+                # Write unencrypted first, then encrypt in place
+                filepath.write_text(content, encoding='utf-8')
+                success, msg = encryptor.encrypt_file(filepath)
+                if success:
+                    # Update filepath to encrypted version
+                    filepath = filepath.with_suffix(filepath.suffix + '.gpg')
         else:
             filepath.write_text(content, encoding='utf-8')
 
