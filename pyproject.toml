@@ -32,6 +32,12 @@ dev = [
     "black>=22.0",
     "ruff>=0.1",
 ]
+tui = [
+    "textual>=0.40.0",
+]
+all = [
+    "textual>=0.40.0",
+]
 
 [project.scripts]
 diane = "diane.cli:main"

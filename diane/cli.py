@@ -9,6 +9,7 @@ import click
 from .config import config
 from .record import Record
 from .storage import Storage
+from .sync import GitSync
 
 
 @click.command()
@@ -19,7 +20,14 @@ from .storage import Storage
 @click.option('--list', '-l', 'list_records', is_flag=True, help='List recent records')
 @click.option('--today', is_flag=True, help='Filter to today\'s records (with --list)')
 @click.option('--search', '-s', 'search_query', help='Search records by content')
+@click.option('--fuzzy', is_flag=True, help='Use fuzzy search (with --search)')
 @click.option('--limit', type=int, default=10, help='Limit number of results (default: 10)')
+@click.option('--set-remote', 'set_remote', help='Set git remote URL for backup')
+@click.option('--push', is_flag=True, help='Push records to remote')
+@click.option('--pull', is_flag=True, help='Pull records from remote')
+@click.option('--sync', is_flag=True, help='Sync records with remote (pull + push)')
+@click.option('--remote-status', is_flag=True, help='Show git remote status')
+@click.option('--tui', is_flag=True, help='Launch interactive TUI dashboard')
 def main(
     text: Optional[str],
     tags: Optional[str],
@@ -28,7 +36,14 @@ def main(
     list_records: bool,
     today: bool,
     search_query: Optional[str],
+    fuzzy: bool,
     limit: int,
+    set_remote: Optional[str],
+    push: bool,
+    pull: bool,
+    sync: bool,
+    remote_status: bool,
+    tui: bool,
 ):
     """diane, - Externalized mental records clerk.
 
@@ -55,18 +70,100 @@ def main(
     if verbose:
         config.verbose = True
 
+    # TUI mode
+    if tui:
+        from .tui import launch_tui
+        launch_tui()
+        return
+
     storage = Storage()
+    git_sync = GitSync()
+
+    # Git remote operations
+    if set_remote:
+        success, msg = git_sync.set_remote(set_remote)
+        if success:
+            click.echo(f"✅ {msg}")
+        else:
+            click.echo(f"❌ {msg}", err=True)
+            sys.exit(1)
+        return
+
+    if remote_status:
+        status = git_sync.status()
+        if not status['is_repo']:
+            click.echo("❌ Not a git repository")
+            return
+
+        click.echo("📡 Remote Status")
+        click.echo("─" * 60)
+        click.echo(f"Branch: {status['branch'] or 'unknown'}")
+        click.echo(f"Remote: {status['remote_url'] or 'none configured'}")
+
+        if status['has_remote']:
+            if status['ahead'] > 0:
+                click.echo(f"↑ Ahead by {status['ahead']} commit(s)")
+            if status['behind'] > 0:
+                click.echo(f"↓ Behind by {status['behind']} commit(s)")
+            if status['ahead'] == 0 and status['behind'] == 0:
+                click.echo("✅ Up to date with remote")
+
+        if status['has_changes']:
+            click.echo("⚠ Uncommitted changes")
+        return
+
+    if push:
+        click.echo("Pushing to remote...")
+        success, msg = git_sync.push()
+        if success:
+            click.echo(f"✅ {msg}")
+        else:
+            click.echo(f"❌ {msg}", err=True)
+            sys.exit(1)
+        return
+
+    if pull:
+        click.echo("Pulling from remote...")
+        success, msg = git_sync.pull()
+        if success:
+            click.echo(f"✅ {msg}")
+        else:
+            click.echo(f"❌ {msg}", err=True)
+            sys.exit(1)
+        return
+
+    if sync:
+        click.echo("Syncing with remote...")
+        success, msg = git_sync.sync()
+        if success:
+            click.echo(f"✅ {msg}")
+        else:
+            click.echo(f"❌ {msg}", err=True)
+            sys.exit(1)
+        return
 
     # Search mode
     if search_query:
-        results = storage.search(search_query)
-        if not results:
-            if config.verbose:
-                click.echo("No matching records found.")
-            return
+        if fuzzy:
+            # Fuzzy search returns (record, score) tuples
+            results = storage.fuzzy_search(search_query, threshold=0.4)
+            if not results:
+                if config.verbose:
+                    click.echo("No matching records found.")
+                return
 
-        for record in results[:limit]:
-            _display_record(record)
+            for record, score in results[:limit]:
+                _display_record(record, similarity_score=score if fuzzy else None)
+        else:
+            # Regular exact search
+            results = storage.search(search_query)
+            if not results:
+                if config.verbose:
+                    click.echo("No matching records found.")
+                return
+
+            for record in results[:limit]:
+                _display_record(record)
         return
 
     # List mode
@@ -131,11 +228,21 @@ def main(
         click.echo(f"✅ Recorded: {filepath.name}")
 
 
-def _display_record(record: Record):
-    """Display a record in a readable format."""
+def _display_record(record: Record, similarity_score: Optional[float] = None):
+    """Display a record in a readable format.
+
+    Args:
+        record: The record to display
+        similarity_score: Optional fuzzy search similarity score (0.0-1.0)
+    """
     click.echo("─" * 60)
     timestamp = record.timestamp.strftime('%Y-%m-%d %H:%M')
     click.echo(f"📅 {timestamp}", nl=False)
+
+    if similarity_score is not None:
+        # Show similarity as percentage
+        score_pct = int(similarity_score * 100)
+        click.echo(f" | 🎯 {score_pct}%", nl=False)
 
     if record.tags:
         tags_str = ", ".join(record.tags)
