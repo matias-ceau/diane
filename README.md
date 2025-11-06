@@ -110,13 +110,13 @@ With the full setup (see [SEAMLESS.md](SEAMLESS.md)):
 source scripts/quick-capture.sh
 
 # Ultra-minimal capture
-d "quick thought"              # 2 chars!
+d, "quick thought"              # 2 chars!
 dc                              # capture clipboard
-dt work "tagged note"          # tagged capture
+d,t work "tagged note"          # tagged capture
 
 # Search & browse
 dl                              # list records
-df keyword                      # fuzzy search
+d,f keyword                      # fuzzy search
 dst                             # show stats
 dtui                            # launch TUI
 
@@ -137,7 +137,7 @@ dsync                           # sync with remote
 ./scripts/enable-auto-sync.sh
 
 # Now just capture - syncing happens automatically!
-d "my thought"    # Saved locally in ~16ms
+d, "my thought"    # Saved locally in ~16ms
                   # Synced to GitHub in background (you don't wait)
                   # Done!
 ```

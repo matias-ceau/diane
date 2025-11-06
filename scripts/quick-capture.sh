@@ -3,9 +3,12 @@
 #
 # Source this in your ~/.bashrc or ~/.zshrc:
 #   source /path/to/quick-capture.sh
+#
+# All shortcuts maintain the comma (,) to preserve the Twin Peaks aesthetic
+# Pattern: d, for basic, d,X for variants
 
-# Quick capture - ultra minimal
-d() {
+# Core capture - THE quintessential "diane," command
+d,() {
     if [ -p /dev/stdin ]; then
         # Reading from pipe
         diane, "$@"
@@ -24,13 +27,13 @@ d() {
     fi
 }
 
-# Quick capture with verbose
-dv() {
+# Verbose variant - "diane, verbose"
+d,v() {
     diane, -v "$@"
 }
 
-# Capture clipboard
-dc() {
+# Clipboard - "diane, clipboard"
+d,c() {
     if command -v pbpaste &> /dev/null; then
         # macOS
         pbpaste | diane, "$@" -v
@@ -46,11 +49,11 @@ dc() {
     fi
 }
 
-# Capture with tag (fast tagging)
-dt() {
+# Tagged capture - "diane, tag"
+d,t() {
     if [ $# -eq 0 ]; then
-        echo "Usage: dt <tag> [text]"
-        echo "Example: dt work \"meeting notes\""
+        echo "Usage: d,t <tag> [text]"
+        echo "Example: d,t work \"meeting notes\""
         return 1
     fi
 
@@ -64,8 +67,16 @@ dt() {
     fi
 }
 
-# Capture from selection (Linux only)
-ds() {
+# Encrypted capture - "diane, encrypted"
+d,e() {
+    if [ -z "$DIANE_GPG_KEY" ]; then
+        echo "⚠️  Warning: DIANE_GPG_KEY not set"
+    fi
+    diane, --encrypt "$@"
+}
+
+# Selection (Linux only) - "diane, selection"
+d,s() {
     if command -v xclip &> /dev/null; then
         xclip -o -selection primary | diane, "$@" -v
     else
@@ -74,16 +85,8 @@ ds() {
     fi
 }
 
-# Quick capture with encryption
-de() {
-    if [ -z "$DIANE_GPG_KEY" ]; then
-        echo "⚠️  Warning: DIANE_GPG_KEY not set"
-    fi
-    diane, --encrypt "$@"
-}
-
-# Capture URL from browser (macOS only)
-du() {
+# URL from browser (macOS) - "diane, url"
+d,u() {
     if command -v osascript &> /dev/null; then
         local url=$(osascript -e 'tell application "Safari" to return URL of front document')
         echo "$url" | diane, --tags web/bookmarks -v
@@ -93,31 +96,71 @@ du() {
     fi
 }
 
-# Quick search aliases
-dl() { diane, --list "$@"; }
-df() { diane, --search --fuzzy "$@"; }
-dfs() { diane, --search "$@"; }
-dst() { diane, --stats; }
-dtui() { diane, --tui; }
+# List - "diane, list"
+d,l() {
+    diane, --list "$@"
+}
 
-# Sync shortcuts
-dp() { diane, --push; }
-dpl() { diane, --pull; }
-dsync() { diane, --sync; }
-dstatus() { diane, --remote-status; }
+# Fuzzy search - "diane, find"
+d,f() {
+    diane, --search --fuzzy "$@"
+}
 
-# Export shortcuts
-djson() { diane, --export json "$@"; }
-dhtml() { diane, --export html "$@"; }
-dcsv() { diane, --export csv "$@"; }
+# Exact search - "diane, search exact"
+d,se() {
+    diane, --search "$@"
+}
 
-# Today's records
-dtoday() {
+# Stats - "diane, stats"
+d,st() {
+    diane, --stats
+}
+
+# TUI - "diane, ui"
+d,ui() {
+    diane, --tui
+}
+
+# Today's records - "diane, today"
+d,today() {
     diane, --list --today "$@"
 }
 
-# Watch mode - auto-sync on save
-dwatch() {
+# Sync operations - "diane, sync"
+d,sync() {
+    diane, --sync
+}
+
+# Push - "diane, push"
+d,push() {
+    diane, --push
+}
+
+# Pull - "diane, pull"
+d,pull() {
+    diane, --pull
+}
+
+# Remote status - "diane, status"
+d,status() {
+    diane, --remote-status
+}
+
+# Export shortcuts - "diane, json" etc.
+d,json() {
+    diane, --export json "$@"
+}
+
+d,html() {
+    diane, --export html "$@"
+}
+
+d,csv() {
+    diane, --export csv "$@"
+}
+
+# Watch mode - auto-sync on save (Linux with inotifywait)
+d,watch() {
     echo "👁️  Watching for changes..."
     while true; do
         inotifywait -e modify,create ~/.local/share/diane/records/ 2>/dev/null && diane, --sync
@@ -125,8 +168,61 @@ dwatch() {
     done
 }
 
+# Help - show all shortcuts
+d,help() {
+    cat << 'EOF'
+diane, Quick Capture Shortcuts
+==============================
+
+Core:
+  d,              Basic capture (interactive with editor if no args)
+  d,v             Verbose capture (shows confirmation)
+
+Input Sources:
+  d,c             Capture clipboard
+  d,s             Capture selection (Linux)
+  d,u             Capture URL from browser (macOS)
+  d,t TAG [text]  Tagged capture
+
+Special:
+  d,e             Encrypted capture
+
+Browse & Search:
+  d,l             List recent records
+  d,f QUERY       Fuzzy search
+  d,se QUERY      Exact search
+  d,st            Show statistics
+  d,ui            Launch TUI dashboard
+  d,today         Today's records
+
+Sync:
+  d,sync          Sync with remote
+  d,push          Push to remote
+  d,pull          Pull from remote
+  d,status        Show remote status
+
+Export:
+  d,json          Export to JSON
+  d,html          Export to HTML
+  d,csv           Export to CSV
+
+Examples:
+  d, "quick thought"           # Direct capture
+  echo "note" | d,             # From pipe
+  d,c                          # Capture clipboard
+  d,t work "meeting notes"     # Tagged capture
+  d,f keyword                  # Fuzzy search
+  d,st                         # View stats
+
+Note: All shortcuts preserve the comma (,) for that Twin Peaks aesthetic!
+      "Diane, 11:30 a.m., February Twenty-fourth..."
+EOF
+}
+
 # Completion setup hint
 alias diane-complete-setup='echo "Add to your shell config:
 Bash: source /path/to/diane.bash-completion
 Zsh:  source /path/to/diane.zsh-completion
 Fish: cp /path/to/diane.fish-completion ~/.config/fish/completions/"'
+
+echo "✨ diane, shortcuts loaded! Type 'd,help' for usage."

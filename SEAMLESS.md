@@ -49,8 +49,8 @@ The quick-capture.sh script provides **ultra-minimal** aliases:
 
 ```bash
 # d - Fastest capture (2 characters!)
-d "meeting notes"                # Direct capture
-echo "thoughts" | d              # From pipe
+d, "meeting notes"                # Direct capture
+echo "thoughts" | d,              # From pipe
 d                                # Opens editor
 
 # dv - Verbose capture
@@ -60,7 +60,7 @@ dv "show confirmation"
 dc                               # Capture what's in clipboard
 
 # dt - Tagged capture
-dt work "meeting with client"    # Capture with tag
+d,t work "meeting with client"    # Capture with tag
 
 # de - Encrypted capture
 de "sensitive information"
@@ -70,7 +70,7 @@ de "sensitive information"
 
 ```bash
 dl                               # List records
-df keyword                       # Fuzzy search
+d,f keyword                       # Fuzzy search
 dfs keyword                      # Exact search
 dst                              # Statistics
 dtui                             # TUI browser
@@ -171,7 +171,7 @@ Already set up with quick-capture.sh:
 
 ```bash
 # Capture current clipboard
-dc
+d,c
 
 # Capture selection (Linux only)
 ds
@@ -370,17 +370,17 @@ echo "Plug '~/diane/scripts/editors/diane.vim'" >> ~/.vimrc
 
 ```bash
 # Quick capture
-d "testing ultra-fast capture"
+d, "testing ultra-fast capture"
 
 # Clipboard capture
 echo "test" | xclip -selection clipboard
-dc
+d,c
 
 # Search
-df test
+d,f test
 
 # Stats
-dst
+d,st
 
 # Verify sync is running
 systemctl --user status diane-sync  # Linux
@@ -398,19 +398,19 @@ launchctl list | grep diane         # macOS
 dtoday
 
 # See stats
-dst
+d,st
 
 # Check sync status
-dstatus
+d,status
 ```
 
 ### Throughout the Day
 
 ```bash
 # Ultra-fast captures
-d "idea for new feature"
-d "meeting note: client wants API"
-dt work "follow up with design team"
+d, "idea for new feature"
+d, "meeting note: client wants API"
+d,t work "follow up with design team"
 
 # Clipboard capture interesting things
 # (Ctrl+Alt+C or just: dc)
@@ -427,7 +427,7 @@ dhtml --export-file ~/daily-review.html
 open ~/daily-review.html
 
 # Stats check
-dst
+d,st
 ```
 
 ### Weekly Review
@@ -440,7 +440,7 @@ diane, --list --limit 100 > weekly.txt
 djson --export-file weekly.json
 
 # Stats overview
-dst
+d,st
 ```
 
 ---

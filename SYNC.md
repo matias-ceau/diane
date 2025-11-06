@@ -238,9 +238,9 @@ time echo "note" | diane,
 export DIANE_AUTO_SYNC=true
 
 # Use normally
-d "thought 1"   # synced
-d "thought 2"   # synced
-d "thought 3"   # synced
+d, "thought 1"   # synced
+d, "thought 2"   # synced
+d, "thought 3"   # synced
 
 # Your records are continuously backed up to GitHub
 ```
@@ -249,14 +249,14 @@ d "thought 3"   # synced
 
 ```bash
 # On Laptop
-d "working on project X"   # synced
+d, "working on project X"   # synced
 
 # On Desktop (minutes later)
-d "continuing project X"   # auto-pulls latest, syncs
+d, "continuing project X"   # auto-pulls latest, syncs
 # Automatically has your laptop note!
 
 # On Laptop again
-d "finishing project X"    # auto-pulls latest, syncs
+d, "finishing project X"    # auto-pulls latest, syncs
 # Automatically has both previous notes!
 ```
 
@@ -264,12 +264,12 @@ d "finishing project X"    # auto-pulls latest, syncs
 
 ```bash
 # On plane (offline)
-d "idea 1"   # saved locally, sync skipped
-d "idea 2"   # saved locally, sync skipped
-d "idea 3"   # saved locally, sync skipped
+d, "idea 1"   # saved locally, sync skipped
+d, "idea 2"   # saved locally, sync skipped
+d, "idea 3"   # saved locally, sync skipped
 
 # Land, connect to WiFi
-d "final thought"   # syncs this + all 3 previous!
+d, "final thought"   # syncs this + all 3 previous!
 # All 4 notes now on GitHub
 ```
 
@@ -315,15 +315,15 @@ Watch seamless sync in action:
 ./scripts/enable-auto-sync.sh
 
 # Test it
-echo "First thought" | d -v
+echo "First thought" | d, -v
 sleep 2  # give sync time
 diane, --remote-status  # check it synced
 
 # Now use it
-d "Meeting notes from standup"
-d "Bug in authentication flow"
-d "Idea for new feature"
-dt work "Follow up with design team"
+d, "Meeting notes from standup"
+d, "Bug in authentication flow"
+d, "Idea for new feature"
+d,t work "Follow up with design team"
 
 # Check your GitHub repo - all 4 are there!
 # You never manually synced. It just happened.
@@ -418,7 +418,7 @@ With seamless auto-sync:
 ./scripts/enable-auto-sync.sh
 
 # 2. Test it
-d "seamless sync is amazing"
+d, "seamless sync is amazing"
 
 # 3. Check your GitHub repo
 # (your note is already there!)
