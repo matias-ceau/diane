@@ -1,6 +1,8 @@
 """Git sync functionality for diane records."""
 
 import subprocess
+import socket
+import threading
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -273,3 +275,200 @@ class GitSync:
                 'ahead': 0,
                 'behind': 0,
             }
+
+    def is_online(self, timeout: int = 3) -> bool:
+        """Check if network is available.
+
+        Args:
+            timeout: Connection timeout in seconds
+
+        Returns:
+            True if network is available
+        """
+        try:
+            # Try to connect to common DNS servers
+            socket.create_connection(("8.8.8.8", 53), timeout=timeout)
+            return True
+        except OSError:
+            pass
+
+        try:
+            # Try Google as fallback
+            socket.create_connection(("www.google.com", 80), timeout=timeout)
+            return True
+        except OSError:
+            return False
+
+    def has_local_changes(self) -> bool:
+        """Check if there are uncommitted local changes.
+
+        Returns:
+            True if there are changes to commit
+        """
+        if not self.is_git_repo():
+            return False
+
+        try:
+            result = subprocess.run(
+                ['git', 'status', '--porcelain'],
+                cwd=self.records_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return bool(result.stdout.strip())
+        except subprocess.CalledProcessError:
+            return False
+
+    def needs_push(self) -> bool:
+        """Check if local is ahead of remote.
+
+        Returns:
+            True if there are commits to push
+        """
+        status = self.status()
+        return status['ahead'] > 0
+
+    def needs_pull(self) -> bool:
+        """Check if remote is ahead of local.
+
+        Returns:
+            True if there are commits to pull
+        """
+        status = self.status()
+        return status['behind'] > 0
+
+    def auto_resolve_conflicts(self) -> Tuple[bool, str]:
+        """Automatically resolve conflicts using 'ours' strategy.
+
+        Returns:
+            Tuple of (success, message)
+        """
+        try:
+            # Check if we're in a merge state
+            merge_head = self.records_dir / '.git' / 'MERGE_HEAD'
+            if not merge_head.exists():
+                return True, "No conflicts to resolve"
+
+            # Use 'ours' strategy - keep local changes
+            subprocess.run(
+                ['git', 'checkout', '--ours', '.'],
+                cwd=self.records_dir,
+                check=True,
+                capture_output=True
+            )
+
+            subprocess.run(
+                ['git', 'add', '.'],
+                cwd=self.records_dir,
+                check=True,
+                capture_output=True
+            )
+
+            subprocess.run(
+                ['git', 'commit', '--no-edit'],
+                cwd=self.records_dir,
+                check=True,
+                capture_output=True
+            )
+
+            return True, "Conflicts resolved (kept local changes)"
+
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.decode() if e.stderr else str(e)
+            return False, f"Failed to resolve conflicts: {error_msg}"
+
+    def smart_sync(self, async_mode: bool = True) -> Tuple[bool, str]:
+        """Smart sync with network detection and conflict resolution.
+
+        Only syncs if:
+        - Network is available
+        - Remote is configured
+        - There are actual changes to sync
+
+        Args:
+            async_mode: Run sync in background thread
+
+        Returns:
+            Tuple of (success, message)
+        """
+        # Check if remote is configured
+        if not self.get_remote_url():
+            return False, "No remote configured"
+
+        # Check network
+        if not self.is_online():
+            return False, "No network connection"
+
+        # Check if sync is needed
+        status = self.status()
+        if not status['has_changes'] and status['ahead'] == 0 and status['behind'] == 0:
+            return True, "Already in sync"
+
+        if async_mode:
+            # Run sync in background
+            thread = threading.Thread(target=self._sync_worker, daemon=True)
+            thread.start()
+            return True, "Sync started in background"
+        else:
+            # Synchronous sync
+            return self._do_smart_sync()
+
+    def _do_smart_sync(self) -> Tuple[bool, str]:
+        """Perform the actual sync operation."""
+        try:
+            # Fetch first
+            subprocess.run(
+                ['git', 'fetch', 'origin'],
+                cwd=self.records_dir,
+                check=True,
+                capture_output=True,
+                timeout=30
+            )
+
+            # Try to pull with rebase
+            try:
+                subprocess.run(
+                    ['git', 'pull', '--rebase', 'origin'],
+                    cwd=self.records_dir,
+                    check=True,
+                    capture_output=True,
+                    timeout=30
+                )
+            except subprocess.CalledProcessError:
+                # If rebase fails, try to auto-resolve
+                success, msg = self.auto_resolve_conflicts()
+                if not success:
+                    return False, f"Pull failed: {msg}"
+
+            # Push local changes
+            if self.needs_push():
+                subprocess.run(
+                    ['git', 'push', 'origin'],
+                    cwd=self.records_dir,
+                    check=True,
+                    capture_output=True,
+                    timeout=30
+                )
+
+            return True, "Smart sync completed"
+
+        except subprocess.TimeoutExpired:
+            return False, "Sync timeout"
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.decode() if e.stderr else str(e)
+            return False, f"Sync failed: {error_msg}"
+
+    def _sync_worker(self):
+        """Background worker for async sync."""
+        try:
+            self._do_smart_sync()
+        except Exception:
+            # Silently fail in background mode
+            pass
+
+    def sync_async(self) -> None:
+        """Trigger async sync (fire and forget)."""
+        if self.get_remote_url() and self.is_online():
+            thread = threading.Thread(target=self._sync_worker, daemon=True)
+            thread.start()

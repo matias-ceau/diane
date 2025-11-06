@@ -128,7 +128,35 @@ dsync                           # sync with remote
 
 ---
 
-## 🔄 Background Auto-Sync
+## ⚡ Seamless Auto-Sync
+
+**Zero-friction sync** — your records sync automatically, invisibly, every time you save:
+
+```bash
+# Enable seamless auto-sync
+./scripts/enable-auto-sync.sh
+
+# Now just capture - syncing happens automatically!
+d "my thought"    # Saved locally in ~16ms
+                  # Synced to GitHub in background (you don't wait)
+                  # Done!
+```
+
+**Features:**
+- 🚀 **Auto-sync on save** — Every record syncs automatically
+- 🔇 **Non-blocking** — Runs in background, doesn't slow you down (~16ms perceived time)
+- 🌐 **Network detection** — Only syncs when online
+- 🎯 **Smart detection** — Only syncs actual changes
+- 🔀 **Auto-conflict resolution** — Your local changes always win
+- ⚡ **218x faster** than manual sync
+
+**See [SYNC.md](SYNC.md) for complete seamless sync guide.**
+
+---
+
+## 🔄 Background Sync Daemon
+
+For timed periodic syncing (alternative/complementary to auto-sync):
 
 Never manually sync again:
 

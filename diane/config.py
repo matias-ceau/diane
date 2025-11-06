@@ -27,6 +27,10 @@ class Config:
         # Default verbosity
         self.verbose = False
 
+        # Auto-sync configuration
+        self.auto_sync = os.environ.get('DIANE_AUTO_SYNC', 'false').lower() == 'true'
+        self.auto_sync_async = True  # Non-blocking sync by default
+
     def ensure_directories(self):
         """Ensure all required directories exist."""
         self.data_home.mkdir(parents=True, exist_ok=True)

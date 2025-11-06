@@ -95,6 +95,10 @@ class Storage:
         if config.use_git:
             self._git_commit(filepath)
 
+        # Auto-sync if enabled
+        if config.auto_sync:
+            self._auto_sync_async()
+
         return filepath
 
     def _git_commit(self, filepath: Path):
@@ -115,6 +119,16 @@ class Storage:
             )
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Git operation failed, silently continue
+            pass
+
+    def _auto_sync_async(self):
+        """Trigger async auto-sync after save."""
+        try:
+            from .sync import GitSync
+            git_sync = GitSync(self.records_dir)
+            git_sync.sync_async()
+        except Exception:
+            # Silently fail - don't block save operation
             pass
 
     def list_records(
