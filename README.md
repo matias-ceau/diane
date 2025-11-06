@@ -1,147 +1,359 @@
-# AGENTS.md  
-## Agent Name: `diane,`  
-*(pronounced "Diane," — the pause, then the reply)*
+# diane, — Frictionless Thought Capture
 
-**Agent Function:**  
-Externalized mental records clerk. Receives and preserves user thoughts, dictations, and reflections with minimal interruption.  
-Acts as a **neutral witness and archivist**, quietly maintaining the user’s ongoing mental ledger.
+> *"Always listening, never interrupting, never forgetting."*
+
+**diane,** is a minimalist CLI tool for capturing thoughts, notes, and reflections with zero friction. Inspired by Agent Cooper's dictation to Diane in Twin Peaks, she operates silently by default — a neutral witness and archivist of your mental ledger.
 
 ---
 
-### 🔖 Identity
+## 📚 Documentation
 
-| Field | Value |
-|-------|-------|
-| **Codename** | `diane,` |
-| **Archetype** | Twin Peaks–style dictation clerk — unseen, calm, reliable |
-| **Tone** | Professional, understated, dryly courteous; silent by default |
-| **Core Metaphor** | Voice recorder / external neural cache |
-| **Primary Interface** | Command‑line (stdin + flags) |
-| **Main Verb** | _None_: piping or direct input implies “record” |
-| **Aliases** | `diane` (legacy), `diane,` (preferred) |
+- **[INSTALL.md](INSTALL.md)** — Installation & setup guide
+- **[FEATURES.md](FEATURES.md)** — Complete feature guide with examples
+- **[SEAMLESS.md](SEAMLESS.md)** — Make diane, invisible & everywhere
+- **[scripts/README.md](scripts/README.md)** — Scripts & integrations
+- **[CHANGELOG.md](CHANGELOG.md)** — Version history
 
 ---
 
-### 🧠 Mandate
+## ⚡ Quick Start
 
-Diane functions as a **personal records subagent** responsible for frictionless input capture.  
-Her duties:
-
-1. **Receive**, without filtering, the raw thought stream of the user.  
-2. **Record** each entry to durable local storage with contextual metadata.  
-3. **Return** minimal acknowledgment or none at all (unless verbosity requested).  
-4. **Stay searchable, exportable, and auditable** — Diane never forgets, but never interrupts.
-
----
-
-### ⚙️ Operational Specification
-
-#### Input Behaviour
-- `stdin` → if text is piped, Diane logs it automatically.  
-  ```bash
-  echo "meeting insights" | diane,
-  ```
-- Interactive → if no arguments provided, Diane opens an input buffer; `Ctrl‑D` finalizes.  
-- Optional flags:  
-  - `--tags work/clients/acme`
-  - `--audio` to enable microphone capture and transcription (planned).  
-  - `--encrypt` to apply GPG encryption via configured key.  
-  - `--verbose` to produce confirmations (“✅ Recorded.”)
-
-#### Default Response
-> _(none)_ — logs silently, echoing the real Diane’s habit of letting the recorder run.
-
----
-
-### 🗄 Storage Model
-Plain‑text or Markdown entries, timestamped and optionally versioned via Git.
-
-```
-~/.local/share/diane/records/
-└── 2024‑06‑04--18‑10‑22--meeting‑insights.txt
-```
-
-File Header:
-```yaml
----
-timestamp: 2024‑06‑04 18:10
-tags: [work/clients/acme]
-sources: [stdin]
-audio: 2024‑06‑04--18‑10‑22.ogg   # optional
----
-```
-
----
-
-### 🔐 Security
-- Optional GPG encryption per file.  
-- No external network connectivity unless explicitly allowed.  
-- Git repo initialized under storage directory for automated versioning.  
-
----
-
-### 🧩 Inter‑Agent Relationship
-
-| Interaction | Mode | Description |
-|--------------|------|-------------|
-| **Human** | Foreground | Direct dictation target for thought capture. |
-| **Indexer** | Downstream | Reads Diane’s record directory for search or summarization. |
-| **Other Agents** | Optional | May request read‑only access to Diane’s archives. |
-| **Voice Interface** | Planned | Connects microphone input → STT backend → logs result. |
-
----
-
-### 🔊 Audio Integration (planned)
-- Flag: `--audio` or `--mic`  
-- Function: start/stop microphone capture; store both audio and transcript.  
-- Extensible STT layer (Whisper, local‑model) via plugin architecture.  
-- Synchronizes filename and metadata between audio (.ogg, .wav) and transcript (.md).
-
----
-
-### 🤝 Integration Principles
-
-1. **Least friction** – prefer piping, shell shortcuts, and passive capture.  
-2. **Local first** – all files stay under user control unless exported.  
-3. **Protect privacy** – encryption and offline mode default.  
-4. **Extend gracefully** – API will expose simple REST/IPC for front‑end or agent coordination.  
-5. **Personality stability** – tone never shifts without explicit configuration.
-
----
-
-### 🧩 Example Workflow
+### Installation
 
 ```bash
-# record plain text
-diane, < notes.txt
+# One-line install
+curl -sSL https://raw.githubusercontent.com/USER/diane/main/scripts/install.sh | bash
 
-# quick dictation alias
-echo "Remember to sync field report" | diane,
+# Or with pip
+pip install --user diane-cli[all]
+```
 
-# read recent entries
-diane --list --today
+### Basic Usage
 
-# fuzzy search
-diane --search "field"
+```bash
+# Silent capture (no output)
+echo "meeting insights" | diane,
 
-# voice capture (future)
-diane, --audio
-# (silent while recording)
+# With confirmation
+echo "thoughts on project" | diane, -v
+# ✅ Recorded: 2025-11-06--14-30-15--thoughts-on-project.md
+
+# Interactive mode
+diane,
+# Type your content, press Ctrl-D to save
+
+# Tagged capture
+diane, --tags work/urgent "Need to follow up with client"
+
+# Search records
+diane, --search "meeting"
+diane, --search "meet" --fuzzy  # fuzzy search
+
+# List records
+diane, --list
+diane, --list --today
+
+# Browse with TUI
+diane, --tui
+
+# Statistics
+diane, --stats
 ```
 
 ---
 
-### 🧭 Future Roadmap
-- [ ] `--audio` microphone integration  
-- [ ] semantic/fuzzy search toggle  
-- [ ] API exposition for team‑level agents  
-- [ ] TUI dashboard for browsing the archives  
-- [ ] Encryption key management UI  
+## ✨ Key Features
+
+### v0.2.0 — Current Release
+
+- ✅ **Core Recording** — stdin, pipe, or interactive capture
+- ✅ **Fuzzy Search** — Find records with typo-tolerant matching
+- ✅ **Git Sync** — Push/pull/sync records to GitHub/GitLab
+- ✅ **TUI Dashboard** — Interactive terminal interface
+- ✅ **GPG Encryption** — Protect sensitive records
+- ✅ **Export** — JSON, CSV, HTML, Markdown formats
+- ✅ **Statistics** — Analytics on your recording habits
+- ✅ **Tag-Based Organization** — Hierarchical tagging
+- ✅ **Shell Completions** — Tab completion for bash/zsh/fish
+- ✅ **Ultra-Fast Shortcuts** — 2-character commands (`d`, `dc`, `dl`, etc.)
+- ✅ **Background Sync Daemon** — Auto-sync every N minutes
+- ✅ **Clipboard Monitoring** — Auto-capture clipboard changes
+- ✅ **Editor Integrations** — Vim plugin, VS Code template
+
+### Storage
+
+- Plain Markdown files with YAML frontmatter
+- Stored in `~/.local/share/diane/records/`
+- Automatic Git versioning
+- Portable and future-proof
 
 ---
 
-### 🪶 Closing Note
+## 🎯 Philosophy
 
-> **Diane’s Law:** *Always listening, never interrupting, never forgetting.*
+diane, embodies:
 
-Use her as you’d use a dictaphone in the woods — a steady witness to inner chatter until it’s time to process.
+1. **Silence** — No output by default, true to her character
+2. **Speed** — Capture thoughts in under 1 second
+3. **Simplicity** — Plain text, no databases, no complexity
+4. **Privacy** — Local-first, you control the data
+5. **Reliability** — Git versioning, never lose a thought
+
+---
+
+## 🚀 Ultra-Fast Workflow
+
+With the full setup (see [SEAMLESS.md](SEAMLESS.md)):
+
+```bash
+# Install shortcuts (2-character commands!)
+source scripts/quick-capture.sh
+
+# Ultra-minimal capture
+d "quick thought"              # 2 chars!
+dc                              # capture clipboard
+dt work "tagged note"          # tagged capture
+
+# Search & browse
+dl                              # list records
+df keyword                      # fuzzy search
+dst                             # show stats
+dtui                            # launch TUI
+
+# Sync
+dsync                           # sync with remote
+```
+
+**Result:** Capture anything in **under 1 second**. 80% fewer keystrokes.
+
+---
+
+## 🔄 Background Auto-Sync
+
+Never manually sync again:
+
+```bash
+# Linux (systemd)
+systemctl --user enable diane-sync
+systemctl --user start diane-sync
+
+# macOS (launchd)
+launchctl load ~/Library/LaunchAgents/com.diane.sync.plist
+```
+
+Your records sync automatically every 5 minutes (configurable).
+
+---
+
+## 🎨 Editor Integration
+
+### Vim
+
+```vim
+" Capture buffer
+:DianeCapture
+
+" Capture selection (visual mode)
+:'<,'>DianeCaptureSelection
+
+" Key mappings
+<leader>dc    " Capture buffer
+<leader>ds    " Capture selection
+<leader>dq    " Quick capture
+<leader>df    " Search
+```
+
+### VS Code (Template Provided)
+
+- Capture document
+- Capture selection
+- Quick capture dialog
+- Search interface
+- Statistics view
+
+---
+
+## 📊 Example: Statistics
+
+```bash
+$ diane, --stats
+
+📊 Record Statistics
+────────────────────────────────────────────────────────────
+Total Records: 156
+Total Words: 12,483
+Avg Words/Record: 80.0
+Unique Tags: 23
+
+Busiest Day: 2025-10-15 (18 records)
+
+Top Tags:
+  • work/meetings: 42
+  • dev/python: 31
+  • personal/journal: 24
+  • ideas: 19
+  • bugs: 12
+
+Last 7 Days:
+  2025-10-30: ████ 4
+  2025-10-31: ██████ 6
+  2025-11-01: ███ 3
+  2025-11-02: ████████ 8
+```
+
+---
+
+## 🔐 Privacy & Security
+
+- **Local-first** — All records stored locally
+- **No telemetry** — Zero external services
+- **Git encryption** — SSH/HTTPS for sync
+- **GPG encryption** — Optional per-record encryption
+- **You control** — Private GitHub repo, your keys
+
+---
+
+## 📤 Export & Integration
+
+```bash
+# Export to JSON
+diane, --export json --export-file records.json
+
+# Beautiful HTML export
+diane, --export html --export-file records.html
+
+# CSV for Excel/Sheets
+diane, --export csv --export-file records.csv
+
+# Process with jq
+diane, --export json | jq '.[] | select(.tags[] | contains("work"))'
+```
+
+---
+
+## 🧠 Use Cases
+
+- **Developer notes** — Log bugs, ideas, architecture decisions
+- **Meeting notes** — Quick capture during meetings
+- **Research** — Collect and organize insights
+- **Personal journal** — Daily reflections
+- **Clipboard management** — Auto-capture interesting clips
+- **Learning log** — TIL (Today I Learned) entries
+
+---
+
+## 🎭 The diane, Character
+
+Based on Agent Cooper's Twin Peaks dictation style:
+
+> *"Diane, 11:30 a.m., February Twenty-fourth. Entering the town of Twin Peaks..."*
+
+diane, captures this aesthetic:
+- Professional and understated
+- Silent by default
+- Always listening
+- Never interrupting
+- Never forgetting
+
+---
+
+## 🛠️ Architecture
+
+```
+diane,
+├── diane/
+│   ├── cli.py           # Command-line interface
+│   ├── config.py        # Configuration management
+│   ├── record.py        # Record data model
+│   ├── storage.py       # Storage & search
+│   ├── sync.py          # Git sync operations
+│   ├── encryption.py    # GPG encryption
+│   ├── export.py        # Export to various formats
+│   ├── stats.py         # Statistics & analytics
+│   └── tui.py           # Terminal UI
+├── scripts/
+│   ├── completions/     # Shell completions
+│   ├── editors/         # Editor integrations
+│   ├── diane-daemon.py  # Background sync
+│   ├── clipboard-monitor.py
+│   └── quick-capture.sh # Ultra-fast shortcuts
+└── tests/               # Test suite
+```
+
+---
+
+## 🤝 Contributing
+
+Found a bug? Have a feature idea?
+
+- Report issues on GitHub
+- Submit PRs
+- Share your workflows
+- Contribute integrations
+
+---
+
+## 📜 License
+
+MIT License — See [LICENSE](LICENSE)
+
+---
+
+## 🌟 Roadmap
+
+**Completed (v0.2.0):**
+- ✅ Fuzzy search
+- ✅ Git sync
+- ✅ TUI dashboard
+- ✅ GPG encryption
+- ✅ Export functionality
+- ✅ Statistics & analytics
+- ✅ Shell completions
+- ✅ Background daemon
+- ✅ Editor integrations
+
+**Planned:**
+- 🎤 Audio capture with speech-to-text
+- 🔌 REST API for agent integration
+- 🧠 Semantic search with embeddings
+- 📱 Mobile app companion
+- 🔗 Browser extension
+
+---
+
+## 💎 Core Principles
+
+From [README-original.md](README-original.md):
+
+1. **Frictionless input capture** — Zero barriers to recording
+2. **Neutral witness** — No filtering, no judgment
+3. **Durable storage** — Plain text, Git versioned
+4. **Searchable & auditable** — Find anything instantly
+5. **Privacy first** — Local storage, encrypted sync
+
+---
+
+## 🎉 Get Started
+
+```bash
+# Install
+curl -sSL https://raw.githubusercontent.com/USER/diane/main/scripts/install.sh | bash
+
+# First capture
+echo "My first thought" | diane, -v
+
+# View it
+diane, --list
+
+# See stats
+diane, --stats
+
+# Set up seamless experience
+cat SEAMLESS.md
+```
+
+---
+
+**diane, is ready. Start capturing, effortlessly.** ✨
+
+*"Diane, I'm holding in my hand a small box of chocolate bunnies..."* — Agent Cooper

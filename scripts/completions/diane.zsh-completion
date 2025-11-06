@@ -1,0 +1,39 @@
+#compdef diane diane,
+# Zsh completion for diane,
+#
+# Install:
+#   sudo cp scripts/completions/diane.zsh-completion /usr/share/zsh/site-functions/_diane
+#   # or
+#   cp scripts/completions/diane.zsh-completion ~/.zsh/completion/_diane
+
+_diane() {
+    local -a opts
+
+    opts=(
+        '(-h --help)'{-h,--help}'[Show help message]'
+        '(-v --verbose)'{-v,--verbose}'[Show confirmation messages]'
+        '(-l --list)'{-l,--list}'[List recent records]'
+        '(-s --search)'{-s,--search}'[Search records by content]:query:'
+        '--tags[Comma-separated tags]:tags:'
+        '--encrypt[Encrypt the record with GPG]'
+        '--fuzzy[Use fuzzy search]'
+        '--limit[Limit number of results]:limit:(5 10 20 50 100)'
+        '--today[Filter to today'\''s records]'
+        '--set-remote[Set git remote URL]:url:'
+        '--push[Push records to remote]'
+        '--pull[Pull records from remote]'
+        '--sync[Sync records with remote]'
+        '--remote-status[Show git remote status]'
+        '--tui[Launch interactive TUI dashboard]'
+        '--gpg-list-keys[List available GPG keys]'
+        '--gpg-setup[Setup GPG encryption interactively]'
+        '--decrypt[Decrypt a specific record file]:file:_files'
+        '--export[Export records to format]:format:(json csv html markdown)'
+        '--export-file[Output file for export]:file:_files'
+        '--stats[Show statistics about your records]'
+    )
+
+    _arguments -s $opts
+}
+
+_diane "$@"

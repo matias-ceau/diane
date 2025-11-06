@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Bash completion for diane,
+#
+# Install:
+#   sudo cp scripts/completions/diane.bash-completion /etc/bash_completion.d/diane
+#   # or
+#   cp scripts/completions/diane.bash-completion ~/.bash_completion.d/diane
+
+_diane_completion() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    # Main options
+    opts="--tags --encrypt --verbose -v --list -l --today --search -s --fuzzy --limit
+          --set-remote --push --pull --sync --remote-status --tui
+          --gpg-list-keys --gpg-setup --decrypt
+          --export --export-file --stats --help"
+
+    # Handle option values
+    case "${prev}" in
+        --export)
+            COMPREPLY=( $(compgen -W "json csv html markdown" -- ${cur}) )
+            return 0
+            ;;
+        --export-file|--decrypt)
+            COMPREPLY=( $(compgen -f -- ${cur}) )
+            return 0
+            ;;
+        --tags)
+            # Suggest common tags based on existing records
+            if [ -d "$HOME/.local/share/diane/records" ]; then
+                local tags=$(grep -h "^- " ~/.local/share/diane/records/*.md 2>/dev/null | sed 's/^- //' | sort -u)
+                COMPREPLY=( $(compgen -W "${tags}" -- ${cur}) )
+            fi
+            return 0
+            ;;
+    esac
+
+    # Default completion
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    return 0
+}
+
+# Register completions for both commands
+complete -F _diane_completion diane
+complete -F _diane_completion diane,
