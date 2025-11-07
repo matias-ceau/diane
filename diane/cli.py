@@ -33,6 +33,10 @@ from .stats import Statistics
 @click.option('--limit', type=int, default=10, help='Limit number of results (default: 10)')
 @click.option('--today', is_flag=True, help='Filter to today\'s records')
 @click.option('--info', '--path', 'show_info', is_flag=True, help='Show configuration and paths')
+@click.option('--record', is_flag=True, help='Record audio from microphone and transcribe')
+@click.option('--record-duration', type=int, help='Recording duration in seconds (default: until Ctrl-C)')
+@click.option('--audio-file', type=click.Path(exists=True), help='Transcribe audio file')
+@click.option('--list-mics', is_flag=True, help='List available microphones')
 @click.option('--set-remote', 'set_remote', help='Set git remote URL for backup')
 @click.option('--push', is_flag=True, help='Push records to remote')
 @click.option('--pull', is_flag=True, help='Pull records from remote')
@@ -50,6 +54,10 @@ def main(
     limit: int,
     today: bool,
     show_info: bool,
+    record: bool,
+    record_duration: Optional[int],
+    audio_file: Optional[str],
+    list_mics: bool,
     set_remote: Optional[str],
     push: bool,
     pull: bool,
@@ -73,8 +81,12 @@ def main(
         # Record from stdin
         echo "meeting insights" | diane
 
-        # Interactive input (type and press Ctrl-D to finish)
-        diane
+        # Record audio
+        diane --record
+        diane --record --record-duration 30
+
+        # Transcribe audio file
+        diane --audio-file recording.wav
 
         # Search records with ripgrep + fzf
         diane --search "meeting"
@@ -94,6 +106,21 @@ def main(
     # Info mode
     if show_info:
         _show_info()
+        return
+
+    # List microphones
+    if list_mics:
+        _list_microphones()
+        return
+
+    # Audio recording mode
+    if record:
+        _record_and_transcribe(record_duration, verbose)
+        return
+
+    # Audio file transcription mode
+    if audio_file:
+        _transcribe_audio_file(audio_file, verbose)
         return
 
     # TUI mode
@@ -463,6 +490,153 @@ def _interactive_search(query: str):
         click.echo("\nSearch cancelled.")
     except Exception as e:
         click.echo(f"❌ Search error: {e}", err=True)
+
+
+def _list_microphones():
+    """List available audio input devices."""
+    from .audio import get_audio_recorder
+
+    recorder = get_audio_recorder()
+
+    if not recorder.is_available():
+        click.echo("❌ No audio recording tool found", err=True)
+        click.echo("   Install one of: pw-record (PipeWire), arecord (ALSA), or ffmpeg", err=True)
+        sys.exit(1)
+
+    click.echo(f"🎤 Audio Recording Tool: {recorder.get_tool_name()}")
+    click.echo("─" * 60)
+
+    devices = recorder.list_devices()
+    if devices:
+        click.echo("Available devices:")
+        for i, device in enumerate(devices, 1):
+            click.echo(f"  {i}. {device}")
+    else:
+        click.echo("Default device available")
+
+    click.echo()
+    click.echo("Use default device with: diane --record")
+
+
+def _record_and_transcribe(duration: Optional[int], verbose: bool):
+    """Record audio and transcribe it."""
+    from .audio import get_audio_recorder, get_audio_transcriber
+    from pathlib import Path
+
+    recorder = get_audio_recorder()
+    transcriber = get_audio_transcriber()
+
+    # Check recording availability
+    if not recorder.is_available():
+        click.echo("❌ No audio recording tool found", err=True)
+        click.echo("   Install one of: pw-record (PipeWire), arecord (ALSA), or ffmpeg", err=True)
+        sys.exit(1)
+
+    # Check transcription availability
+    if not transcriber.is_available():
+        click.echo("❌ OPENAI_API_KEY not set", err=True)
+        click.echo("   Set it to enable transcription: export OPENAI_API_KEY=sk-...", err=True)
+        sys.exit(1)
+
+    # Show recording info
+    if verbose or duration is None:
+        duration_msg = f"for {duration} seconds" if duration else "until Ctrl-C"
+        click.echo(f"🎤 Recording {duration_msg}...")
+        click.echo(f"   Tool: {recorder.get_tool_name()}")
+        if duration is None:
+            click.echo("   Press Ctrl-C to stop")
+
+    # Record audio
+    success, msg, audio_path = recorder.record(duration=duration)
+
+    if not success:
+        click.echo(f"❌ {msg}", err=True)
+        sys.exit(1)
+
+    if verbose:
+        click.echo(f"✅ {msg}")
+        click.echo("📝 Transcribing...")
+
+    # Transcribe audio (and clean up on success)
+    success, msg, transcription = transcriber.transcribe_and_cleanup(
+        audio_path,
+        keep_on_failure=True  # Keep audio file if transcription fails
+    )
+
+    if not success:
+        click.echo(f"❌ {msg}", err=True)
+        click.echo(f"   Audio saved to: {audio_path}", err=True)
+        sys.exit(1)
+
+    if verbose:
+        click.echo(f"✅ {msg}")
+        click.echo()
+
+    # Save transcription as record
+    storage = Storage()
+    record = Record(
+        content=transcription,
+        sources=["audio-recording"],
+        audio_file=str(audio_path) if audio_path.exists() else None
+    )
+
+    filepath = storage.save(record)
+
+    # Show confirmation
+    if verbose:
+        click.echo(f"✅ Recorded: {filepath.name}")
+    else:
+        click.echo("✓")
+
+
+def _transcribe_audio_file(audio_file_path: str, verbose: bool):
+    """Transcribe an audio file."""
+    from .audio import get_audio_transcriber
+    from pathlib import Path
+
+    transcriber = get_audio_transcriber()
+
+    # Check transcription availability
+    if not transcriber.is_available():
+        click.echo("❌ OPENAI_API_KEY not set", err=True)
+        click.echo("   Set it to enable transcription: export OPENAI_API_KEY=sk-...", err=True)
+        sys.exit(1)
+
+    audio_path = Path(audio_file_path)
+
+    if not audio_path.exists():
+        click.echo(f"❌ Audio file not found: {audio_file_path}", err=True)
+        sys.exit(1)
+
+    if verbose:
+        click.echo(f"📝 Transcribing {audio_path.name}...")
+
+    # Transcribe audio (don't clean up - user provided the file)
+    success, msg, transcription = transcriber.transcribe(audio_path)
+
+    if not success:
+        click.echo(f"❌ {msg}", err=True)
+        sys.exit(1)
+
+    if verbose:
+        click.echo(f"✅ {msg}")
+        click.echo()
+
+    # Save transcription as record
+    storage = Storage()
+    record = Record(
+        content=transcription,
+        sources=["audio-file"],
+        audio_file=str(audio_path)
+    )
+
+    filepath = storage.save(record)
+
+    # Show confirmation
+    if verbose:
+        click.echo(f"✅ Recorded: {filepath.name}")
+    else:
+        click.echo("✓")
 
 
 if __name__ == '__main__':

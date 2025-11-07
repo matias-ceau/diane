@@ -5,6 +5,75 @@ All notable changes to the **diane** project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-11-07
+
+### Audio Recording
+
+Dictation support added.
+
+### Added
+
+#### Audio Recording & Transcription
+- **`--record` flag** — Record audio from microphone and auto-transcribe
+- **`--record-duration N`** — Record for N seconds (default: until Ctrl-C)
+- **`--audio-file <path>`** — Transcribe existing audio files
+- **`--list-mics`** — List available audio input devices
+
+#### Auto-Detection System
+- **Automatic tool detection** — Finds available recording tools in priority order:
+  1. `pw-record` (PipeWire) — Modern Linux systems
+  2. `arecord` (ALSA) — Traditional Linux audio
+  3. `ffmpeg` — Universal fallback
+- **Smart error messages** — Tells you what to install if no tool found
+
+#### Transcription
+- **OpenAI Whisper API integration** — Accurate speech-to-text
+- **Multiple audio formats** — WAV, MP3, M4A, etc.
+- **Automatic cleanup** — Deletes audio file after successful transcription
+- **Failure handling** — Keeps audio in `/tmp` if transcription fails
+
+#### Storage
+- **Temp audio directory** — `/tmp/diane-audio/` (configurable via `$DIANE_AUDIO_TEMP`)
+- **Unique filenames** — `diane-recording-YYYYMMDD-HHMMSS.wav`
+- **Audio metadata** — Records include `audio_file` path in frontmatter
+
+### Technical
+
+- **New module**: `diane/audio.py` with `AudioRecorder` and `AudioTranscriber` classes
+- **Optional dependency**: `openai >= 1.0` for transcription
+- **Install option**: `pip install diane-cli[audio]`
+- **Environment variables**:
+  - `OPENAI_API_KEY` — Required for transcription
+  - `DIANE_AUDIO_TEMP` — Custom temp directory (default: `/tmp/diane-audio`)
+  - `DIANE_TRANSCRIBE_MODEL` — Override model (default: `gpt-4o-audio-preview`)
+
+### Documentation
+
+- Updated README.md with audio features section
+- Added audio examples to CLI help
+- Added audio dependencies to install instructions
+- Created setup guide for audio configuration
+
+### Usage Examples
+
+```bash
+# Record audio dictation
+diane --record
+# Recording until Ctrl-C...
+# ✓
+
+# Record for 30 seconds
+diane --record --record-duration 30
+
+# Transcribe existing audio file
+diane --audio-file meeting.mp3
+
+# Check available microphones
+diane --list-mics
+```
+
+---
+
 ## [0.3.0] - 2025-11-07
 
 ### 🎯 Major Refactor — Simplified & Unix-Friendly

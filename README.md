@@ -1,8 +1,8 @@
-# diane — Thought Clerk
+# diane
 
 > *"Diane, 11:30 a.m., February Twenty-fourth..."*
 
-A minimalist CLI for capturing thoughts with zero friction. Inspired by Agent Cooper's dictation to Diane in Twin Peaks.
+A minimalist CLI for capturing thoughts. Inspired by Agent Cooper's dictation practice.
 
 ---
 
@@ -12,11 +12,19 @@ A minimalist CLI for capturing thoughts with zero friction. Inspired by Agent Co
 # Install
 pip install diane-cli
 
+# Install with audio support
+pip install diane-cli[audio]
+
 # Setup (first time)
 diane --setup
 
-# Record a thought
+# Record a thought (text)
 echo "meeting insights" | diane
+# ✓
+
+# Record audio
+diane --record
+# Recording until Ctrl-C...
 # ✓
 
 # View latest records
@@ -47,9 +55,32 @@ diane --today
 ### Core
 
 - **Frictionless capture** — Pipe, args, or interactive
+- **Audio recording** — Record and transcribe
 - **Git versioning** — Automatic commits
 - **Smart defaults** — No args = show latest records
 - **Pipe-friendly** — `timestamp|content` format when piped
+
+### Audio
+
+- **Voice recording** — Dictation via `--record`
+- **Auto-transcription** — OpenAI Whisper API
+- **Audio file support** — Transcribe existing files
+- **Tool auto-detection** — PipeWire, ALSA, or ffmpeg
+- **Temp storage** — Audio preserved if transcription fails
+
+```bash
+# Record until Ctrl-C
+diane --record
+
+# Record for 30 seconds
+diane --record --record-duration 30
+
+# Transcribe existing audio file
+diane --audio-file meeting-recording.mp3
+
+# List available microphones
+diane --list-mics
+```
 
 ### Search & Browse
 
@@ -165,18 +196,43 @@ Your thought here
 - Python ≥ 3.8
 - Git (for versioning)
 
-**Optional**:
+**For Audio Recording**:
+- One of: `pw-record` (PipeWire), `arecord` (ALSA), or `ffmpeg`
+- OpenAI API key (for transcription)
+- Python package: `pip install diane-cli[audio]`
+
+**For Interactive Search**:
 - `ripgrep` + `fzf` (for interactive search)
 - `bat` (for search preview)
 
-Install on macOS:
+### Install Optional Tools
+
+**macOS**:
 ```bash
-brew install ripgrep fzf bat
+brew install ripgrep fzf bat ffmpeg
 ```
 
-Install on Ubuntu/Debian:
+**Ubuntu/Debian**:
 ```bash
+# Audio (choose one)
+apt install pipewire-bin        # PipeWire (modern, recommended)
+apt install alsa-utils          # ALSA (traditional)
+apt install ffmpeg              # ffmpeg (fallback)
+
+# Search
 apt install ripgrep fzf bat
+```
+
+**Audio Setup**:
+```bash
+# Install audio support
+pip install diane-cli[audio]
+
+# Set OpenAI API key
+export OPENAI_API_KEY=sk-...
+
+# Test audio setup
+diane --list-mics
 ```
 
 ---
