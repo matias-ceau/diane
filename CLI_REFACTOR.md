@@ -9,14 +9,31 @@
 
 ## Proposed Structure
 
-### Quick Capture (Keep Simple)
+### Quick Capture (Heredoc/Pipe Only)
 
 ```bash
-# Text capture (most common - keep ultra-fast)
-diane [TEXT]                    # Direct argument
-echo "text" | diane             # Pipe
-diane                           # Show latest (default when no input)
+# Here-string (single line)
+diane <<< "quick thought"
+
+# Heredoc (multiline) - retro shell aesthetic
+diane << EOF
+Meeting notes from today:
+- Project timeline discussed
+- Next milestone: end of month
+EOF
+
+# Pipe (traditional)
+echo "text" | diane
+
+# Redirect
+diane < notes.txt
+
+# Default (no input)
+diane                       # Shows latest records
 ```
+
+**No `diane [TEXT]` argument** — This avoids all parsing ambiguity and command name clashes.
+The shell handles heredoc/here-string BEFORE diane sees it, so it arrives as clean stdin.
 
 ### Viewing & Review
 
@@ -118,13 +135,14 @@ Keep these working (at least for one version):
 ```bash
 $ diane --help
 
-Usage: diane [OPTIONS] [TEXT] [COMMAND]...
+Usage: diane [OPTIONS] [COMMAND]...
 
   diane - Minimalist thought capture CLI
 
 Quick capture:
-  diane [TEXT]          Capture text
-  echo "text" | diane   Pipe text
+  diane <<< "text"      Here-string
+  echo "text" | diane   Pipe
+  diane << EOF          Heredoc (multiline)
   diane                 Show latest records
 
 Commands:
@@ -144,7 +162,7 @@ Options:
   --help    Show this message and exit
 
 Examples:
-  diane "quick thought"
+  diane <<< "quick thought"
   diane show --today
   diane record --duration 30
   diane search "meeting"
