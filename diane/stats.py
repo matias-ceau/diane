@@ -17,15 +17,6 @@ class Statistics:
         """Get total number of records."""
         return len(self.records)
 
-    def tag_counts(self) -> Dict[str, int]:
-        """Get count of records per tag."""
-        tag_counter = Counter()
-
-        for record in self.records:
-            for tag in record.tags:
-                tag_counter[tag] += 1
-
-        return dict(tag_counter.most_common())
 
     def records_by_date(self) -> Dict[str, int]:
         """Get count of records per day."""
@@ -84,19 +75,6 @@ class Statistics:
         busiest = max(by_date.items(), key=lambda x: x[1])
         return busiest
 
-    def most_used_tags(self, limit: int = 10) -> List[tuple]:
-        """Get most frequently used tags.
-
-        Args:
-            limit: Maximum number of tags to return
-
-        Returns:
-            List of (tag, count) tuples
-        """
-        tag_counts = self.tag_counts()
-        sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
-        return sorted_tags[:limit]
-
     def summary(self) -> Dict:
         """Get a comprehensive statistics summary."""
         busiest_date, busiest_count = self.busiest_day()
@@ -105,8 +83,6 @@ class Statistics:
             'total_records': self.total_count(),
             'total_words': self.word_count(),
             'avg_words_per_record': round(self.average_words_per_record(), 1),
-            'unique_tags': len(self.tag_counts()),
             'busiest_day': busiest_date,
             'busiest_day_count': busiest_count,
-            'top_tags': self.most_used_tags(5),
         }

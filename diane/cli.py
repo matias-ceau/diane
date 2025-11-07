@@ -4,7 +4,18 @@ import sys
 from datetime import datetime, timedelta
 from typing import Optional
 
-import click
+# Easter egg: replace comma with -- (Twin Peaks tribute)
+# Usage: diane , "some text" == diane -- "some text"
+if len(sys.argv) > 1 and sys.argv[1] == ',':
+    sys.argv[1] = '--'
+
+import rich_click as click
+
+# Configure rich-click for beautiful help
+click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.USE_MARKDOWN = True
+click.rich_click.SHOW_ARGUMENTS = True
+click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 from .config import config
 from .record import Record
@@ -17,117 +28,78 @@ from .stats import Statistics
 
 @click.command()
 @click.argument('text', required=False)
-@click.option('--tags', help='Comma-separated tags (e.g., work/clients/acme)')
-@click.option('--encrypt', is_flag=True, help='Encrypt the record with GPG')
-@click.option('--verbose', '-v', is_flag=True, help='Show confirmation messages')
-@click.option('--list', '-l', 'list_records', is_flag=True, help='List recent records')
-@click.option('--today', is_flag=True, help='Filter to today\'s records (with --list)')
-@click.option('--search', '-s', 'search_query', help='Search records by content')
-@click.option('--fuzzy', is_flag=True, help='Use fuzzy search (with --search)')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+@click.option('--search', 'search_query', help='Search records with ripgrep + fzf')
 @click.option('--limit', type=int, default=10, help='Limit number of results (default: 10)')
+@click.option('--today', is_flag=True, help='Filter to today\'s records')
+@click.option('--info', '--path', 'show_info', is_flag=True, help='Show configuration and paths')
 @click.option('--set-remote', 'set_remote', help='Set git remote URL for backup')
 @click.option('--push', is_flag=True, help='Push records to remote')
 @click.option('--pull', is_flag=True, help='Pull records from remote')
 @click.option('--sync', is_flag=True, help='Sync records with remote (pull + push)')
 @click.option('--remote-status', is_flag=True, help='Show git remote status')
 @click.option('--tui', is_flag=True, help='Launch interactive TUI dashboard')
-@click.option('--gpg-list-keys', is_flag=True, help='List available GPG keys')
-@click.option('--gpg-setup', is_flag=True, help='Setup GPG encryption interactively')
-@click.option('--decrypt', 'decrypt_file', help='Decrypt a specific record file')
+@click.option('--setup', is_flag=True, help='Run first-time setup wizard')
 @click.option('--export', 'export_format', type=click.Choice(['json', 'csv', 'html', 'markdown']), help='Export records to format')
 @click.option('--export-file', help='Output file for export (default: stdout)')
 @click.option('--stats', is_flag=True, help='Show statistics about your records')
 def main(
     text: Optional[str],
-    tags: Optional[str],
-    encrypt: bool,
     verbose: bool,
-    list_records: bool,
-    today: bool,
     search_query: Optional[str],
-    fuzzy: bool,
     limit: int,
+    today: bool,
+    show_info: bool,
     set_remote: Optional[str],
     push: bool,
     pull: bool,
     sync: bool,
     remote_status: bool,
     tui: bool,
-    gpg_list_keys: bool,
-    gpg_setup: bool,
-    decrypt_file: Optional[str],
+    setup: bool,
     export_format: Optional[str],
     export_file: Optional[str],
     stats: bool,
 ):
-    """diane, - Externalized mental records clerk.
+    """diane - Externalized mental records clerk.
 
     Records thoughts, dictations, and reflections with minimal interruption.
 
     \b
     Examples:
+        # Show latest records (default behavior)
+        diane
+
         # Record from stdin
-        echo "meeting insights" | diane,
+        echo "meeting insights" | diane
 
         # Interactive input (type and press Ctrl-D to finish)
-        diane,
+        diane
 
-        # Record with tags
-        diane, --tags work/urgent "Remember to call client"
+        # Search records with ripgrep + fzf
+        diane --search "meeting"
 
-        # List today's records
-        diane, --list --today
-
-        # Search records
-        diane, --search "meeting"
+        # Show today's records
+        diane --today
     """
     # Set verbosity globally
     if verbose:
         config.verbose = True
 
+    # Setup wizard
+    if setup:
+        _run_setup_wizard()
+        return
+
+    # Info mode
+    if show_info:
+        _show_info()
+        return
+
     # TUI mode
     if tui:
         from .tui import launch_tui
         launch_tui()
-        return
-
-    # GPG operations
-    if gpg_list_keys:
-        encryptor = GPGEncryption()
-        keys = encryptor.list_keys()
-        if not keys:
-            click.echo("❌ No GPG keys found. Generate one with: gpg --gen-key")
-            return
-
-        click.echo("🔑 Available GPG keys:")
-        click.echo("─" * 60)
-        for key in keys:
-            click.echo(f"Key ID: {key['key_id']}")
-            click.echo(f"   User: {key['uid']}")
-            click.echo()
-        return
-
-    if gpg_setup:
-        setup_gpg_key()
-        return
-
-    if decrypt_file:
-        encryptor = GPGEncryption()
-        from pathlib import Path
-        filepath = Path(decrypt_file)
-
-        if not filepath.exists():
-            click.echo(f"❌ File not found: {filepath}", err=True)
-            sys.exit(1)
-
-        click.echo(f"Decrypting {filepath.name}...")
-        success, msg = encryptor.decrypt_file(filepath)
-
-        if success:
-            click.echo(f"✅ {msg}")
-        else:
-            click.echo(f"❌ {msg}", err=True)
-            sys.exit(1)
         return
 
     storage = Storage()
@@ -196,28 +168,9 @@ def main(
             sys.exit(1)
         return
 
-    # Search mode
+    # Search mode - use ripgrep + fzf
     if search_query:
-        if fuzzy:
-            # Fuzzy search returns (record, score) tuples
-            results = storage.fuzzy_search(search_query, threshold=0.4)
-            if not results:
-                if config.verbose:
-                    click.echo("No matching records found.")
-                return
-
-            for record, score in results[:limit]:
-                _display_record(record, similarity_score=score if fuzzy else None)
-        else:
-            # Regular exact search
-            results = storage.search(search_query)
-            if not results:
-                if config.verbose:
-                    click.echo("No matching records found.")
-                return
-
-            for record in results[:limit]:
-                _display_record(record)
+        _interactive_search(search_query)
         return
 
     # Export mode
@@ -267,17 +220,10 @@ def main(
         click.echo(f"Total Records: {summary['total_records']}")
         click.echo(f"Total Words: {summary['total_words']}")
         click.echo(f"Avg Words/Record: {summary['avg_words_per_record']}")
-        click.echo(f"Unique Tags: {summary['unique_tags']}")
         click.echo()
 
         if summary['busiest_day']:
             click.echo(f"Busiest Day: {summary['busiest_day']} ({summary['busiest_day_count']} records)")
-            click.echo()
-
-        if summary['top_tags']:
-            click.echo("Top Tags:")
-            for tag, count in summary['top_tags']:
-                click.echo(f"  • {tag}: {count}")
             click.echo()
 
         # Show recent activity
@@ -290,8 +236,19 @@ def main(
 
         return
 
-    # List mode
-    if list_records:
+    # Record mode - get input
+    content = None
+
+    if text:
+        # Text provided as argument
+        content = text
+    elif not sys.stdin.isatty():
+        # Input from pipe/redirect - read it
+        content = sys.stdin.read()
+
+    # If no content provided (no args, no stdin data), show latest records
+    if not content or not content.strip():
+        # Default behavior: show latest records
         since = None
         if today:
             # Get records from start of today
@@ -308,75 +265,204 @@ def main(
             _display_record(record)
         return
 
-    # Record mode - get input
-    content = None
-
-    if text:
-        # Text provided as argument
-        content = text
-    elif not sys.stdin.isatty():
-        # Input from pipe/redirect
-        content = sys.stdin.read()
-    else:
-        # Interactive mode
-        if config.verbose:
-            click.echo("Enter text (Ctrl-D to finish):")
-        try:
-            content = sys.stdin.read()
-        except KeyboardInterrupt:
-            if config.verbose:
-                click.echo("\nCancelled.")
-            sys.exit(1)
-
-    if not content or not content.strip():
-        if config.verbose:
-            click.echo("No content provided.")
-        sys.exit(0)
-
-    # Parse tags
-    tag_list = []
-    if tags:
-        tag_list = [t.strip() for t in tags.split(',')]
-
     # Create and save record
     record = Record(
         content=content,
-        tags=tag_list,
         sources=["stdin"] if not sys.stdin.isatty() else ["interactive"],
     )
 
-    filepath = storage.save(record, encrypt=encrypt)
+    filepath = storage.save(record)
 
-    # Silent by default, unless verbose
+    # Show simple confirmation by default, detailed info with --verbose
     if config.verbose:
         click.echo(f"✅ Recorded: {filepath.name}")
+    else:
+        click.echo("✓")
 
 
-def _display_record(record: Record, similarity_score: Optional[float] = None):
+def _display_record(record: Record):
     """Display a record in a readable format.
 
     Args:
         record: The record to display
-        similarity_score: Optional fuzzy search similarity score (0.0-1.0)
     """
-    click.echo("─" * 60)
-    timestamp = record.timestamp.strftime('%Y-%m-%d %H:%M')
-    click.echo(f"📅 {timestamp}", nl=False)
+    # Unix philosophy: clean output when piped, pretty when interactive
+    is_tty = sys.stdout.isatty()
 
-    if similarity_score is not None:
-        # Show similarity as percentage
-        score_pct = int(similarity_score * 100)
-        click.echo(f" | 🎯 {score_pct}%", nl=False)
-
-    if record.tags:
-        tags_str = ", ".join(record.tags)
-        click.echo(f" | 🏷  {tags_str}")
+    if is_tty:
+        # Pretty formatting for terminal
+        click.echo("─" * 60)
+        timestamp = record.timestamp.strftime('%Y-%m-%d %H:%M')
+        click.echo(f"📅 {timestamp}")
+        click.echo()
+        click.echo(record.content)
+        click.echo()
     else:
+        # Clean output for pipes - just content, one record per line
+        # Format: timestamp|content (allows parsing with cut/awk)
+        timestamp = record.timestamp.strftime('%Y-%m-%d %H:%M')
+        # Escape newlines in content for single-line output
+        clean_content = record.content.replace('\n', ' ')
+        click.echo(f"{timestamp}|{clean_content}")
+
+
+def _show_info():
+    """Show configuration and paths information."""
+    click.echo("📍 diane Configuration")
+    click.echo("─" * 60)
+    click.echo(f"Records Directory: {config.get_records_dir()}")
+    click.echo(f"Data Home:         {config.data_home}")
+    click.echo(f"Git Enabled:       {config.use_git}")
+    click.echo(f"Auto-sync:         {config.auto_sync}")
+    click.echo()
+
+    # Show git remote if configured
+    try:
+        git_sync = GitSync()
+        remote_url = git_sync.get_remote_url()
+        if remote_url:
+            click.echo(f"Git Remote:        {remote_url}")
+        else:
+            click.echo("Git Remote:        (not configured)")
+    except Exception:
+        pass
+
+    click.echo()
+    click.echo("Run 'diane --setup' to configure diane")
+
+
+def _run_setup_wizard():
+    """Run first-time setup wizard."""
+    click.echo("╔════════════════════════════════════════════════════════════╗")
+    click.echo("║           diane Setup Wizard                              ║")
+    click.echo("╚════════════════════════════════════════════════════════════╝")
+    click.echo()
+
+    # Show what will be created
+    records_dir = config.get_records_dir()
+    click.echo("diane will create the following structure:")
+    click.echo()
+    click.echo(f"  📁 {records_dir}/")
+    click.echo("     └── Your records will be stored here as .md files")
+    click.echo()
+    click.echo("  📁 Each record contains:")
+    click.echo("     • Timestamp")
+    click.echo("     • Content (your thoughts/notes)")
+    click.echo("     • Git version history (automatic)")
+    click.echo()
+
+    # Create directories
+    config.ensure_directories()
+    storage = Storage()
+
+    click.echo("✅ Directories created")
+    click.echo()
+
+    # Ask about remote sync
+    if click.confirm("Would you like to set up remote sync (e.g., GitHub, GitLab)?"):
+        click.echo()
+        click.echo("Remote sync allows you to:")
+        click.echo("  • Backup your records to a remote git repository")
+        click.echo("  • Sync across multiple devices")
+        click.echo("  • Have encrypted backups in the cloud")
         click.echo()
 
+        remote_url = click.prompt("Enter git remote URL (e.g., git@github.com:user/diane-records.git)")
+
+        git_sync = GitSync()
+        success, msg = git_sync.set_remote(remote_url)
+
+        if success:
+            click.echo(f"✅ {msg}")
+            click.echo()
+
+            # Ask about initial push
+            if click.confirm("Push any existing records to remote now?"):
+                click.echo("Pushing...")
+                success, msg = git_sync.push()
+                if success:
+                    click.echo(f"✅ {msg}")
+                else:
+                    click.echo(f"⚠ {msg}")
+        else:
+            click.echo(f"❌ {msg}")
+
     click.echo()
-    click.echo(record.content)
+    click.echo("╔════════════════════════════════════════════════════════════╗")
+    click.echo("║  Setup Complete!                                          ║")
+    click.echo("╚════════════════════════════════════════════════════════════╝")
     click.echo()
+    click.echo("Quick start:")
+    click.echo("  • diane                    # Show latest records")
+    click.echo("  • echo 'note' | diane      # Capture a quick thought")
+    click.echo("  • diane --search 'query'   # Search with ripgrep + fzf")
+    click.echo("  • diane --sync             # Sync with remote")
+    click.echo("  • diane --info             # Show configuration")
+    click.echo()
+
+
+def _interactive_search(query: str):
+    """Launch interactive search using ripgrep + fzf."""
+    import subprocess
+
+    records_dir = config.get_records_dir()
+
+    # Check if rg and fzf are available
+    try:
+        subprocess.run(['which', 'rg'], capture_output=True, check=True)
+        subprocess.run(['which', 'fzf'], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        click.echo("❌ This feature requires 'ripgrep' and 'fzf' to be installed.", err=True)
+        click.echo("   Install with: brew install ripgrep fzf  (macOS)", err=True)
+        click.echo("              or: apt install ripgrep fzf   (Ubuntu/Debian)", err=True)
+        sys.exit(1)
+
+    # Build the ripgrep + fzf pipeline
+    try:
+        # First run ripgrep to find matches
+        rg_result = subprocess.run(
+            ['rg', '--color=always', '--line-number', '--no-heading', '--smart-case', query],
+            cwd=records_dir,
+            capture_output=True,
+            text=True
+        )
+
+        if not rg_result.stdout:
+            click.echo("No matches found.")
+            return
+
+        # Pipe to fzf for interactive selection
+        fzf_process = subprocess.Popen(
+            [
+                'fzf',
+                '--ansi',
+                '--color', 'hl:-1:underline,hl+:-1:underline:reverse',
+                '--delimiter', ':',
+                '--preview', f'bat --color=always --style=plain {{1}} || cat {{1}}',
+                '--preview-window', 'up,60%,border-bottom,+{{2}}+3/3,~3'
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        stdout, stderr = fzf_process.communicate(input=rg_result.stdout)
+
+        if fzf_process.returncode == 0 and stdout:
+            # User selected a file, extract filename and display
+            parts = stdout.strip().split(':', 1)
+            if parts:
+                filename = parts[0]
+                filepath = records_dir / filename
+                if filepath.exists():
+                    record = Record.from_file(filepath)
+                    _display_record(record)
+
+    except KeyboardInterrupt:
+        click.echo("\nSearch cancelled.")
+    except Exception as e:
+        click.echo(f"❌ Search error: {e}", err=True)
 
 
 if __name__ == '__main__':

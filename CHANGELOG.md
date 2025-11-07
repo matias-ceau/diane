@@ -1,9 +1,101 @@
 # Changelog
 
-All notable changes to the **diane,** project will be documented in this file.
+All notable changes to the **diane** project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.0] - 2025-11-07
+
+### 🎯 Major Refactor — Simplified & Unix-Friendly
+
+This release represents a major refactor toward Unix philosophy and simplicity.
+
+### Added
+
+#### ✨ New Features
+- **Default behavior shows records** — `diane` with no arguments now shows latest records (no more `--list` needed)
+- **Pipe-friendly output** — Clean `timestamp|content` format when output is piped (Unix composability)
+- **Rich help menus** — Beautiful, colorful help powered by `rich-click`
+- **First-run setup wizard** — `diane --setup` guides initial configuration
+- **Info command** — `diane --info` or `diane --path` shows configuration and paths
+- **Comma easter egg** — `diane , "text"` works like `diane -- "text"` (Twin Peaks tribute)
+- **Simple confirmations** — Default `✓` confirmation, detailed output with `--verbose`
+
+#### 🔍 Enhanced Search
+- **ripgrep + fzf integration** — Interactive search with live preview (replaces custom fuzzy search)
+- Requires `rg` and `fzf` installed, provides much better search experience
+
+### Changed
+
+#### 🎨 Breaking Changes
+- **Removed tags** — Simplified capture, no more `--tags` option or tag metadata
+- **Removed local encryption** — No more `--encrypt` flag (encryption moved to future remote-sync layer)
+- **Removed `-s` short flag** — Only `--search` (avoid conflicts with other CLI tools)
+- **Changed default behavior** — `diane` now shows records instead of waiting for input
+- **Removed `diane,` command** — Only `diane` command (comma is easter egg only)
+
+#### ⚡ Improvements
+- **Faster, cleaner output** — No decorative elements when piped to other tools
+- **Better Unix integration** — `diane | wc -l` counts actual records, not UI elements
+- **Simpler data model** — Records only have timestamp, sources, and content
+- **Cleaner help** — Organized, colorful help menu with better descriptions
+
+### Removed
+
+- Tag functionality (`--tags`, tag display, tag statistics)
+- Local GPG encryption (`--encrypt`, `--decrypt`, `--gpg-*` commands)
+- Custom fuzzy search (replaced by ripgrep + fzf)
+- `-s` short flag for search
+- `--list` flag (default behavior now)
+- `diane,` command alias
+
+### Dependencies
+
+- **Added**: `rich-click >= 1.7` for beautiful help menus
+- **Removed**: Direct `rich` dependency (included via rich-click)
+
+### Documentation
+
+- **Completely rewritten README.md** — Focused on Unix philosophy and simplicity
+- **New ROADMAP.md** — Vision for AI-powered processing layer (Layer 2)
+- **Updated CHANGELOG.md** — This file
+
+### Philosophy
+
+This release refocuses **diane** on its core purpose:
+
+> "Do one thing well: capture and retrieve thoughts"
+
+The tool now follows Unix principles strictly:
+- Clean, parseable output when piped
+- Silent unless needed
+- Composes with other CLI tools
+- Plain text, no lock-in
+
+### Upgrade Notes
+
+**Breaking changes from v0.2.0:**
+
+1. **Tags removed** — Old records with tags will still work (tags in frontmatter are ignored)
+2. **Encrypted files** — Any `.gpg` files won't be read automatically (decrypt manually if needed)
+3. **Command changes**:
+   - `diane, --list` → `diane`
+   - `diane, --search query` → `diane --search query`
+   - `diane, --tags work "note"` → `diane "note"` (tags not supported)
+
+**Migration:**
+```bash
+# Old way
+diane, --list --today
+diane, --tags work "my note"
+
+# New way
+diane --today
+diane "my note"
+```
+
+---
 
 ## [0.2.0] - 2025-11-06
 

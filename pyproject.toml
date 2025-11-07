@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "diane-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "Externalized mental records clerk - frictionless thought capture CLI"
 authors = [{name = "matias-ceau"}]
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -24,6 +24,7 @@ dependencies = [
     "click>=8.0",
     "pyyaml>=6.0",
     "python-dateutil>=2.8",
+    "rich-click>=1.7",
 ]
 
 [project.optional-dependencies]
@@ -41,7 +42,6 @@ all = [
 
 [project.scripts]
 diane = "diane.cli:main"
-"diane," = "diane.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
