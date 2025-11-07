@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "diane-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "Externalized mental records clerk - frictionless thought capture CLI"
 authors = [{name = "matias-ceau"}]
 readme = "README.md"
@@ -31,6 +31,12 @@ dev = [
     "pytest>=7.0",
     "black>=22.0",
     "ruff>=0.1",
+]
+tui = [
+    "textual>=0.40.0",
+]
+all = [
+    "textual>=0.40.0",
 ]
 
 [project.scripts]

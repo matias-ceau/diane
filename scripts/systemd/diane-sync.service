@@ -1,0 +1,23 @@
+[Unit]
+Description=diane, automatic sync daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/diane-daemon.py --interval 300
+Restart=on-failure
+RestartSec=60
+
+# Run as user
+User=%i
+
+# Environment
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

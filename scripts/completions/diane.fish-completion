@@ -1,0 +1,66 @@
+# Fish completion for diane,
+#
+# Install:
+#   sudo cp scripts/completions/diane.fish-completion /usr/share/fish/vendor_completions.d/diane.fish
+#   # or
+#   cp scripts/completions/diane.fish-completion ~/.config/fish/completions/diane.fish
+
+# Disable file completion by default
+complete -c diane -f
+complete -c 'diane,' -f
+
+# Basic options
+complete -c diane -s h -l help -d 'Show help message'
+complete -c diane -s v -l verbose -d 'Show confirmation messages'
+complete -c diane -s l -l list -d 'List recent records'
+complete -c diane -s s -l search -d 'Search records by content' -r
+complete -c diane -l tags -d 'Comma-separated tags' -r
+complete -c diane -l encrypt -d 'Encrypt the record with GPG'
+complete -c diane -l fuzzy -d 'Use fuzzy search'
+complete -c diane -l limit -d 'Limit number of results' -r
+complete -c diane -l today -d 'Filter to today\'s records'
+
+# Git sync
+complete -c diane -l set-remote -d 'Set git remote URL' -r
+complete -c diane -l push -d 'Push records to remote'
+complete -c diane -l pull -d 'Pull records from remote'
+complete -c diane -l sync -d 'Sync records with remote'
+complete -c diane -l remote-status -d 'Show git remote status'
+
+# TUI
+complete -c diane -l tui -d 'Launch interactive TUI dashboard'
+
+# GPG
+complete -c diane -l gpg-list-keys -d 'List available GPG keys'
+complete -c diane -l gpg-setup -d 'Setup GPG encryption interactively'
+complete -c diane -l decrypt -d 'Decrypt a specific record file' -rF
+
+# Export
+complete -c diane -l export -d 'Export records to format' -xa 'json csv html markdown'
+complete -c diane -l export-file -d 'Output file for export' -rF
+
+# Stats
+complete -c diane -l stats -d 'Show statistics about your records'
+
+# Copy all completions for diane, command
+complete -c 'diane,' -s h -l help -d 'Show help message'
+complete -c 'diane,' -s v -l verbose -d 'Show confirmation messages'
+complete -c 'diane,' -s l -l list -d 'List recent records'
+complete -c 'diane,' -s s -l search -d 'Search records by content' -r
+complete -c 'diane,' -l tags -d 'Comma-separated tags' -r
+complete -c 'diane,' -l encrypt -d 'Encrypt the record with GPG'
+complete -c 'diane,' -l fuzzy -d 'Use fuzzy search'
+complete -c 'diane,' -l limit -d 'Limit number of results' -r
+complete -c 'diane,' -l today -d 'Filter to today\'s records'
+complete -c 'diane,' -l set-remote -d 'Set git remote URL' -r
+complete -c 'diane,' -l push -d 'Push records to remote'
+complete -c 'diane,' -l pull -d 'Pull records from remote'
+complete -c 'diane,' -l sync -d 'Sync records with remote'
+complete -c 'diane,' -l remote-status -d 'Show git remote status'
+complete -c 'diane,' -l tui -d 'Launch interactive TUI dashboard'
+complete -c 'diane,' -l gpg-list-keys -d 'List available GPG keys'
+complete -c 'diane,' -l gpg-setup -d 'Setup GPG encryption interactively'
+complete -c 'diane,' -l decrypt -d 'Decrypt a specific record file' -rF
+complete -c 'diane,' -l export -d 'Export records to format' -xa 'json csv html markdown'
+complete -c 'diane,' -l export-file -d 'Output file for export' -rF
+complete -c 'diane,' -l stats -d 'Show statistics about your records'

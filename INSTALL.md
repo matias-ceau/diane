@@ -119,6 +119,90 @@ diane, --encrypt "Sensitive information here"
 
 *Note: Full GPG encryption support is planned for a future release.*
 
+## Advanced Features (v0.1.0)
+
+### Fuzzy Search
+
+Find records with approximate matching and similarity scores:
+
+```bash
+# Fuzzy search shows similarity percentage
+diane, --search "architec" --fuzzy
+
+# Output:
+# 📅 2025-11-06 13:34 | 🎯 80% | 🏷  tech/architecture
+# Discussion with the team about implementing microservices architecture
+```
+
+Fuzzy search is great for finding records when you:
+- Don't remember the exact wording
+- Have typos
+- Want to find related content
+
+### Git Sync & Remote Backup
+
+Sync your records to a GitHub or GitLab repository for backup and multi-device access.
+
+#### Setup
+
+```bash
+# Configure remote repository
+diane, --set-remote git@github.com:username/diane-records.git
+
+# Check sync status
+diane, --remote-status
+
+# Output:
+# 📡 Remote Status
+# ────────────────────────────────────────────────────────────
+# Branch: master
+# Remote: git@github.com:username/diane-records.git
+# ✅ Up to date with remote
+```
+
+#### Sync Operations
+
+```bash
+# Push records to remote
+diane, --push
+
+# Pull records from remote
+diane, --pull
+
+# Full sync (pull + push)
+diane, --sync
+```
+
+#### Multi-Device Setup
+
+1. On your first device, create a GitHub repo and set it as remote
+2. On other devices, clone the repo manually first:
+   ```bash
+   git clone git@github.com:username/diane-records.git ~/.local/share/diane/records
+   ```
+3. Use `diane, --sync` on any device to keep records in sync
+
+### TUI Dashboard
+
+Launch an interactive terminal interface to browse your records:
+
+```bash
+diane, --tui
+```
+
+**Installation:** The TUI requires the `textual` package:
+```bash
+pip install "diane-cli[tui]"
+# or install all optional features
+pip install "diane-cli[all]"
+```
+
+**Controls:**
+- `j/k` or arrow keys: Navigate records
+- `Enter`: View full record details
+- `r`: Refresh record list
+- `q`: Quit
+
 ## Shell Aliases
 
 For even more convenience, add these to your shell configuration:
@@ -126,22 +210,34 @@ For even more convenience, add these to your shell configuration:
 ```bash
 # Quick dictation
 alias d="diane,"
-
-# Verbose variant
 alias dv="diane, -v"
 
-# Search records
+# Search
 alias ds="diane, --search"
+alias df="diane, --search --fuzzy"  # fuzzy search
 
-# List today's records
+# List
+alias dl="diane, --list"
 alias dt="diane, --list --today"
+
+# Sync
+alias dp="diane, --push"
+alias dpl="diane, --pull"
+alias dsync="diane, --sync"
+alias dstatus="diane, --remote-status"
+
+# TUI
+alias dtui="diane, --tui"
 ```
 
 Then use:
 ```bash
 echo "Quick note" | d
-ds "keyword"
-dt
+ds "keyword"           # exact search
+df "keywrd"            # fuzzy search (handles typos)
+dt                     # today's records
+dsync                  # sync with remote
+dtui                   # launch TUI browser
 ```
 
 ## Viewing Your Records
