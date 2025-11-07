@@ -3,6 +3,7 @@
 import sys
 from datetime import datetime, timedelta
 from typing import Optional
+from pathlib import Path
 
 # Easter egg: replace comma with -- (Twin Peaks tribute)
 # Usage: diane , "some text" == diane -- "some text"
@@ -16,303 +17,386 @@ click.rich_click.USE_RICH_MARKUP = True
 click.rich_click.USE_MARKDOWN = True
 click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
+click.rich_click.STYLE_ERRORS_SUGGESTION = "yellow italic"
+click.rich_click.SHOW_METAVARS_COLUMN = False
+click.rich_click.APPEND_METAVARS_HELP = True
 
 from .config import config
 from .record import Record
 from .storage import Storage
 from .sync import GitSync
-from .encryption import GPGEncryption, setup_gpg_key
-from .export import Exporter
-from .stats import Statistics
 
 
-@click.command()
-@click.argument('text', required=False)
+@click.group(invoke_without_command=True)
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
-@click.option('--search', 'search_query', help='Search records with ripgrep + fzf')
-@click.option('--limit', type=int, default=10, help='Limit number of results (default: 10)')
-@click.option('--today', is_flag=True, help='Filter to today\'s records')
-@click.option('--info', '--path', 'show_info', is_flag=True, help='Show configuration and paths')
-@click.option('--record', is_flag=True, help='Record audio from microphone and transcribe')
-@click.option('--record-duration', type=int, help='Recording duration in seconds (default: until Ctrl-C)')
-@click.option('--audio-file', type=click.Path(exists=True), help='Transcribe audio file')
-@click.option('--list-mics', is_flag=True, help='List available microphones')
-@click.option('--set-remote', 'set_remote', help='Set git remote URL for backup')
-@click.option('--push', is_flag=True, help='Push records to remote')
-@click.option('--pull', is_flag=True, help='Pull records from remote')
-@click.option('--sync', is_flag=True, help='Sync records with remote (pull + push)')
-@click.option('--remote-status', is_flag=True, help='Show git remote status')
-@click.option('--tui', is_flag=True, help='Launch interactive TUI dashboard')
-@click.option('--setup', is_flag=True, help='Run first-time setup wizard')
-@click.option('--export', 'export_format', type=click.Choice(['json', 'csv', 'html', 'markdown']), help='Export records to format')
-@click.option('--export-file', help='Output file for export (default: stdout)')
-@click.option('--stats', is_flag=True, help='Show statistics about your records')
-def main(
-    text: Optional[str],
-    verbose: bool,
-    search_query: Optional[str],
-    limit: int,
-    today: bool,
-    show_info: bool,
-    record: bool,
-    record_duration: Optional[int],
-    audio_file: Optional[str],
-    list_mics: bool,
-    set_remote: Optional[str],
-    push: bool,
-    pull: bool,
-    sync: bool,
-    remote_status: bool,
-    tui: bool,
-    setup: bool,
-    export_format: Optional[str],
-    export_file: Optional[str],
-    stats: bool,
-):
-    """diane - Externalized mental records clerk.
-
-    Records thoughts, dictations, and reflections with minimal interruption.
+@click.pass_context
+def cli(ctx, verbose):
+    """diane - Minimalist thought capture CLI
 
     \b
-    Examples:
-        # Show latest records (default behavior)
-        diane
+    Quick capture:
+      diane <<< "text"          Here-string
+      echo "text" | diane       Pipe
+      diane << EOF              Heredoc (multiline)
+      diane                     Show latest records
 
-        # Record from stdin
-        echo "meeting insights" | diane
-
-        # Record audio
-        diane --record
-        diane --record --record-duration 30
-
-        # Transcribe audio file
-        diane --audio-file recording.wav
-
-        # Search records with ripgrep + fzf
-        diane --search "meeting"
-
-        # Show today's records
-        diane --today
+    \b
+    Commands:
+      show      View records
+      record    Audio dictation
+      search    Interactive search
+      tui       Terminal UI
+      sync      Git operations
+      export    Export records
+      stats     Statistics
+      setup     First-time setup
+      info      Show configuration
     """
-    # Set verbosity globally
     if verbose:
         config.verbose = True
 
-    # Setup wizard
-    if setup:
-        _run_setup_wizard()
-        return
+    # If no command specified, handle stdin or show records
+    if ctx.invoked_subcommand is None:
+        if not sys.stdin.isatty():
+            # Input from pipe/redirect/heredoc
+            content = sys.stdin.read()
+            if content and content.strip():
+                _capture_text(content, verbose)
+            else:
+                # Empty stdin - show records
+                _show_records(limit=10, today=False, since=None, verbose=verbose)
+        else:
+            # Interactive terminal, no command - show records
+            _show_records(limit=10, today=False, since=None, verbose=verbose)
 
-    # Info mode
-    if show_info:
-        _show_info()
-        return
 
-    # List microphones
-    if list_mics:
+@cli.command()
+@click.option('--limit', '-n', type=int, default=10, help='Number of records to show')
+@click.option('--today', is_flag=True, help='Show only today\'s records')
+@click.option('--since', help='Show records since date (YYYY-MM-DD)')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def show(limit, today, since, verbose):
+    """View recent records"""
+    if verbose:
+        config.verbose = True
+
+    since_date = None
+    if today:
+        since_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    elif since:
+        try:
+            since_date = datetime.strptime(since, '%Y-%m-%d')
+        except ValueError:
+            click.echo(f"❌ Invalid date format: {since}. Use YYYY-MM-DD", err=True)
+            sys.exit(1)
+
+    _show_records(limit=limit, today=today, since=since_date, verbose=verbose)
+
+
+@cli.command()
+@click.option('--duration', '-d', type=int, help='Recording duration in seconds')
+@click.option('--file', '-f', 'audio_file', type=click.Path(exists=True), help='Transcribe audio file')
+@click.option('--list-devices', is_flag=True, help='List available microphones')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def record(duration, audio_file, list_devices, verbose):
+    """Record and transcribe audio"""
+    if verbose:
+        config.verbose = True
+
+    if list_devices:
         _list_microphones()
         return
 
-    # Audio recording mode
-    if record:
-        _record_and_transcribe(record_duration, verbose)
-        return
-
-    # Audio file transcription mode
     if audio_file:
         _transcribe_audio_file(audio_file, verbose)
-        return
+    else:
+        _record_and_transcribe(duration, verbose)
 
-    # TUI mode
-    if tui:
+
+@cli.command()
+@click.argument('query', required=False)
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def search(query, verbose):
+    """Search records interactively (requires ripgrep + fzf)
+
+    If no query provided, opens fzf to browse all records.
+    """
+    if verbose:
+        config.verbose = True
+
+    _interactive_search(query or "")
+
+
+@cli.command()
+def tui():
+    """Launch terminal UI dashboard"""
+    try:
         from .tui import launch_tui
         launch_tui()
-        return
+    except ImportError:
+        click.echo("❌ TUI not available. Install with: pip install diane-cli[tui]", err=True)
+        sys.exit(1)
 
-    storage = Storage()
+
+@cli.group()
+def sync():
+    """Git sync operations"""
+    pass
+
+
+@sync.command('push')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def sync_push(verbose):
+    """Push records to remote"""
+    if verbose:
+        config.verbose = True
+
     git_sync = GitSync()
 
-    # Git remote operations
-    if set_remote:
-        success, msg = git_sync.set_remote(set_remote)
-        if success:
-            click.echo(f"✅ {msg}")
-        else:
-            click.echo(f"❌ {msg}", err=True)
-            sys.exit(1)
-        return
-
-    if remote_status:
-        status = git_sync.status()
-        if not status['is_repo']:
-            click.echo("❌ Not a git repository")
-            return
-
-        click.echo("📡 Remote Status")
-        click.echo("─" * 60)
-        click.echo(f"Branch: {status['branch'] or 'unknown'}")
-        click.echo(f"Remote: {status['remote_url'] or 'none configured'}")
-
-        if status['has_remote']:
-            if status['ahead'] > 0:
-                click.echo(f"↑ Ahead by {status['ahead']} commit(s)")
-            if status['behind'] > 0:
-                click.echo(f"↓ Behind by {status['behind']} commit(s)")
-            if status['ahead'] == 0 and status['behind'] == 0:
-                click.echo("✅ Up to date with remote")
-
-        if status['has_changes']:
-            click.echo("⚠ Uncommitted changes")
-        return
-
-    if push:
+    if verbose:
         click.echo("Pushing to remote...")
-        success, msg = git_sync.push()
-        if success:
-            click.echo(f"✅ {msg}")
-        else:
-            click.echo(f"❌ {msg}", err=True)
-            sys.exit(1)
-        return
 
-    if pull:
+    success, msg = git_sync.push()
+    if success:
+        click.echo(f"✅ {msg}" if verbose else "✓")
+    else:
+        click.echo(f"❌ {msg}", err=True)
+        sys.exit(1)
+
+
+@sync.command('pull')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def sync_pull(verbose):
+    """Pull records from remote"""
+    if verbose:
+        config.verbose = True
+
+    git_sync = GitSync()
+
+    if verbose:
         click.echo("Pulling from remote...")
-        success, msg = git_sync.pull()
+
+    success, msg = git_sync.pull()
+    if success:
+        click.echo(f"✅ {msg}" if verbose else "✓")
+    else:
+        click.echo(f"❌ {msg}", err=True)
+        sys.exit(1)
+
+
+@sync.command('status')
+def sync_status():
+    """Show git sync status"""
+    git_sync = GitSync()
+    status = git_sync.status()
+
+    if not status['is_repo']:
+        click.echo("❌ Not a git repository")
+        return
+
+    click.echo("📡 Sync Status")
+    click.echo("─" * 60)
+    click.echo(f"Branch: {status['branch'] or 'unknown'}")
+    click.echo(f"Remote: {status['remote_url'] or 'none configured'}")
+
+    if status['has_remote']:
+        if status['ahead'] > 0:
+            click.echo(f"↑ Ahead by {status['ahead']} commit(s)")
+        if status['behind'] > 0:
+            click.echo(f"↓ Behind by {status['behind']} commit(s)")
+        if status['ahead'] == 0 and status['behind'] == 0:
+            click.echo("✅ Up to date")
+
+    if status['has_changes']:
+        click.echo("⚠ Uncommitted changes")
+
+
+@sync.command('remote')
+@click.argument('url', required=False)
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def sync_remote(url, verbose):
+    """Set or show git remote URL"""
+    if verbose:
+        config.verbose = True
+
+    git_sync = GitSync()
+
+    if url:
+        # Set remote
+        success, msg = git_sync.set_remote(url)
         if success:
-            click.echo(f"✅ {msg}")
+            click.echo(f"✅ {msg}" if verbose else "✓")
         else:
             click.echo(f"❌ {msg}", err=True)
             sys.exit(1)
-        return
-
-    if sync:
-        click.echo("Syncing with remote...")
-        success, msg = git_sync.sync()
-        if success:
-            click.echo(f"✅ {msg}")
+    else:
+        # Show current remote
+        current = git_sync.get_remote_url()
+        if current:
+            click.echo(current)
         else:
-            click.echo(f"❌ {msg}", err=True)
-            sys.exit(1)
+            click.echo("No remote configured")
+
+
+# Convenience aliases at top level
+@cli.command('push', hidden=True)
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+@click.pass_context
+def push_alias(ctx, verbose):
+    """Alias for 'diane sync push'"""
+    ctx.invoke(sync_push, verbose=verbose)
+
+
+@cli.command('pull', hidden=True)
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+@click.pass_context
+def pull_alias(ctx, verbose):
+    """Alias for 'diane sync pull'"""
+    ctx.invoke(sync_pull, verbose=verbose)
+
+
+@cli.command()
+@click.argument('format', type=click.Choice(['json', 'csv', 'html', 'markdown']))
+@click.option('--file', '-f', 'output_file', help='Output file (default: stdout)')
+@click.option('--today', is_flag=True, help='Export only today\'s records')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def export(format, output_file, today, verbose):
+    """Export records to various formats"""
+    if verbose:
+        config.verbose = True
+
+    from .export import Exporter
+
+    storage = Storage()
+
+    since = None
+    if today:
+        since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    results = storage.list_records(limit=None, since=since)
+
+    if not results:
+        click.echo("No records to export")
         return
 
-    # Search mode - use ripgrep + fzf
-    if search_query:
-        _interactive_search(search_query)
-        return
+    # Generate export
+    if format == 'json':
+        content = Exporter.to_json(results)
+    elif format == 'csv':
+        content = Exporter.to_csv(results)
+    elif format == 'html':
+        content = Exporter.to_html(results)
+    elif format == 'markdown':
+        content = Exporter.to_markdown(results)
 
-    # Export mode
-    if export_format:
-        # Get all records (or filtered)
-        since = None
-        if today:
-            since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-        results = storage.list_records(limit=None, since=since)
-
-        if not results:
-            click.echo("No records to export.")
-            return
-
-        # Generate export
-        if export_format == 'json':
-            content = Exporter.to_json(results)
-        elif export_format == 'csv':
-            content = Exporter.to_csv(results)
-        elif export_format == 'html':
-            content = Exporter.to_html(results)
-        elif export_format == 'markdown':
-            content = Exporter.to_markdown(results)
-
-        # Output
-        if export_file:
-            from pathlib import Path
-            Exporter.save_export(content, Path(export_file))
-            click.echo(f"✅ Exported {len(results)} records to {export_file}")
+    # Output
+    if output_file:
+        Exporter.save_export(content, Path(output_file))
+        if verbose:
+            click.echo(f"✅ Exported {len(results)} records to {output_file}")
         else:
-            click.echo(content)
+            click.echo("✓")
+    else:
+        click.echo(content)
+
+
+@cli.command()
+@click.option('--days', type=int, default=7, help='Number of days for recent activity')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
+def stats(days, verbose):
+    """Show statistics about your records"""
+    if verbose:
+        config.verbose = True
+
+    from .stats import Statistics
+
+    storage = Storage()
+    records = storage.list_records(limit=None)
+
+    if not records:
+        click.echo("No records found")
         return
 
-    # Statistics mode
-    if stats:
-        records = storage.list_records(limit=None)
-        if not records:
-            click.echo("No records found.")
-            return
+    statistics = Statistics(records)
+    summary = statistics.summary()
 
-        statistics = Statistics(records)
-        summary = statistics.summary()
+    click.echo("📊 Record Statistics")
+    click.echo("─" * 60)
+    click.echo(f"Total Records: {summary['total_records']}")
+    click.echo(f"Total Words: {summary['total_words']}")
+    click.echo(f"Avg Words/Record: {summary['avg_words_per_record']}")
+    click.echo()
 
-        click.echo("📊 Record Statistics")
-        click.echo("─" * 60)
-        click.echo(f"Total Records: {summary['total_records']}")
-        click.echo(f"Total Words: {summary['total_words']}")
-        click.echo(f"Avg Words/Record: {summary['avg_words_per_record']}")
+    if summary['busiest_day']:
+        click.echo(f"Busiest Day: {summary['busiest_day']} ({summary['busiest_day_count']} records)")
         click.echo()
 
-        if summary['busiest_day']:
-            click.echo(f"Busiest Day: {summary['busiest_day']} ({summary['busiest_day_count']} records)")
-            click.echo()
+    # Show recent activity
+    recent = statistics.recent_activity(days=days)
+    if recent:
+        click.echo(f"Last {days} Days:")
+        for date_str, count in recent.items():
+            bar = '█' * count
+            click.echo(f"  {date_str}: {bar} {count}")
 
-        # Show recent activity
-        recent = statistics.recent_activity(days=7)
-        if recent:
-            click.echo("Last 7 Days:")
-            for date_str, count in recent.items():
-                bar = '█' * count
-                click.echo(f"  {date_str}: {bar} {count}")
 
+@cli.command()
+def setup():
+    """Run first-time setup wizard"""
+    _run_setup_wizard()
+
+
+@cli.command()
+@click.option('--paths', is_flag=True, help='Show only paths')
+def info(paths):
+    """Show configuration and paths"""
+    if paths:
+        click.echo(config.get_records_dir())
         return
 
-    # Record mode - get input
-    content = None
+    _show_info()
 
-    if text:
-        # Text provided as argument
-        content = text
-    elif not sys.stdin.isatty():
-        # Input from pipe/redirect - read it
-        content = sys.stdin.read()
 
-    # If no content provided (no args, no stdin data), show latest records
-    if not content or not content.strip():
-        # Default behavior: show latest records
-        since = None
-        if today:
-            # Get records from start of today
-            since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+# Helper functions
 
-        results = storage.list_records(limit=limit, since=since)
+def _capture_text(content: str, verbose: bool):
+    """Capture text and save as record"""
+    storage = Storage()
 
-        if not results:
-            if config.verbose:
-                click.echo("No records found.")
-            return
-
-        for record in results:
-            _display_record(record)
-        return
-
-    # Create and save record
     record = Record(
         content=content,
-        sources=["stdin"] if not sys.stdin.isatty() else ["interactive"],
+        sources=["stdin"],
     )
 
     filepath = storage.save(record)
 
-    # Show simple confirmation by default, detailed info with --verbose
-    if config.verbose:
+    if verbose:
         click.echo(f"✅ Recorded: {filepath.name}")
     else:
         click.echo("✓")
 
 
-def _display_record(record: Record):
-    """Display a record in a readable format.
+def _show_records(limit: int, today: bool, since: Optional[datetime], verbose: bool):
+    """Display records"""
+    storage = Storage()
 
-    Args:
-        record: The record to display
-    """
+    since_date = since
+    if today:
+        since_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    results = storage.list_records(limit=limit, since=since_date)
+
+    if not results:
+        if verbose:
+            click.echo("No records found")
+        return
+
+    for record in results:
+        _display_record(record)
+
+
+def _display_record(record: Record):
+    """Display a record in a readable format"""
     # Unix philosophy: clean output when piped, pretty when interactive
     is_tty = sys.stdout.isatty()
 
@@ -325,16 +409,14 @@ def _display_record(record: Record):
         click.echo(record.content)
         click.echo()
     else:
-        # Clean output for pipes - just content, one record per line
-        # Format: timestamp|content (allows parsing with cut/awk)
+        # Clean output for pipes
         timestamp = record.timestamp.strftime('%Y-%m-%d %H:%M')
-        # Escape newlines in content for single-line output
         clean_content = record.content.replace('\n', ' ')
         click.echo(f"{timestamp}|{clean_content}")
 
 
 def _show_info():
-    """Show configuration and paths information."""
+    """Show configuration and paths information"""
     click.echo("📍 diane Configuration")
     click.echo("─" * 60)
     click.echo(f"Records Directory: {config.get_records_dir()}")
@@ -355,11 +437,11 @@ def _show_info():
         pass
 
     click.echo()
-    click.echo("Run 'diane --setup' to configure diane")
+    click.echo("Run 'diane setup' to configure diane")
 
 
 def _run_setup_wizard():
-    """Run first-time setup wizard."""
+    """Run first-time setup wizard"""
     click.echo("╔════════════════════════════════════════════════════════════╗")
     click.echo("║           diane Setup Wizard                              ║")
     click.echo("╚════════════════════════════════════════════════════════════╝")
@@ -420,16 +502,16 @@ def _run_setup_wizard():
     click.echo("╚════════════════════════════════════════════════════════════╝")
     click.echo()
     click.echo("Quick start:")
-    click.echo("  • diane                    # Show latest records")
-    click.echo("  • echo 'note' | diane      # Capture a quick thought")
-    click.echo("  • diane --search 'query'   # Search with ripgrep + fzf")
-    click.echo("  • diane --sync             # Sync with remote")
-    click.echo("  • diane --info             # Show configuration")
+    click.echo("  • diane <<< \"thought\"         # Quick capture")
+    click.echo("  • diane                       # Show latest")
+    click.echo("  • diane search \"query\"        # Search")
+    click.echo("  • diane sync push             # Sync to remote")
+    click.echo("  • diane info                  # Show config")
     click.echo()
 
 
 def _interactive_search(query: str):
-    """Launch interactive search using ripgrep + fzf."""
+    """Launch interactive search using ripgrep + fzf"""
     import subprocess
 
     records_dir = config.get_records_dir()
@@ -447,16 +529,28 @@ def _interactive_search(query: str):
     # Build the ripgrep + fzf pipeline
     try:
         # First run ripgrep to find matches
-        rg_result = subprocess.run(
-            ['rg', '--color=always', '--line-number', '--no-heading', '--smart-case', query],
-            cwd=records_dir,
-            capture_output=True,
-            text=True
-        )
+        if query:
+            rg_result = subprocess.run(
+                ['rg', '--color=always', '--line-number', '--no-heading', '--smart-case', query],
+                cwd=records_dir,
+                capture_output=True,
+                text=True
+            )
 
-        if not rg_result.stdout:
-            click.echo("No matches found.")
-            return
+            if not rg_result.stdout:
+                click.echo("No matches found")
+                return
+
+            initial_input = rg_result.stdout
+        else:
+            # No query - browse all files
+            rg_result = subprocess.run(
+                ['rg', '--color=always', '--line-number', '--no-heading', '.'],
+                cwd=records_dir,
+                capture_output=True,
+                text=True
+            )
+            initial_input = rg_result.stdout
 
         # Pipe to fzf for interactive selection
         fzf_process = subprocess.Popen(
@@ -474,7 +568,7 @@ def _interactive_search(query: str):
             text=True
         )
 
-        stdout, stderr = fzf_process.communicate(input=rg_result.stdout)
+        stdout, stderr = fzf_process.communicate(input=initial_input)
 
         if fzf_process.returncode == 0 and stdout:
             # User selected a file, extract filename and display
@@ -487,13 +581,13 @@ def _interactive_search(query: str):
                     _display_record(record)
 
     except KeyboardInterrupt:
-        click.echo("\nSearch cancelled.")
+        click.echo("\nSearch cancelled")
     except Exception as e:
         click.echo(f"❌ Search error: {e}", err=True)
 
 
 def _list_microphones():
-    """List available audio input devices."""
+    """List available audio input devices"""
     from .audio import get_audio_recorder
 
     recorder = get_audio_recorder()
@@ -515,13 +609,12 @@ def _list_microphones():
         click.echo("Default device available")
 
     click.echo()
-    click.echo("Use default device with: diane --record")
+    click.echo("Use with: diane record")
 
 
 def _record_and_transcribe(duration: Optional[int], verbose: bool):
-    """Record audio and transcribe it."""
+    """Record audio and transcribe it"""
     from .audio import get_audio_recorder, get_audio_transcriber
-    from pathlib import Path
 
     recorder = get_audio_recorder()
     transcriber = get_audio_transcriber()
@@ -541,10 +634,10 @@ def _record_and_transcribe(duration: Optional[int], verbose: bool):
     # Show recording info
     if verbose or duration is None:
         duration_msg = f"for {duration} seconds" if duration else "until Ctrl-C"
-        click.echo(f"🎤 Recording {duration_msg}...")
-        click.echo(f"   Tool: {recorder.get_tool_name()}")
+        click.echo(f"Recording {duration_msg}...")
+        click.echo(f"Tool: {recorder.get_tool_name()}")
         if duration is None:
-            click.echo("   Press Ctrl-C to stop")
+            click.echo("Press Ctrl-C to stop")
 
     # Record audio
     success, msg, audio_path = recorder.record(duration=duration)
@@ -555,12 +648,12 @@ def _record_and_transcribe(duration: Optional[int], verbose: bool):
 
     if verbose:
         click.echo(f"✅ {msg}")
-        click.echo("📝 Transcribing...")
+        click.echo("Transcribing...")
 
     # Transcribe audio (and clean up on success)
     success, msg, transcription = transcriber.transcribe_and_cleanup(
         audio_path,
-        keep_on_failure=True  # Keep audio file if transcription fails
+        keep_on_failure=True
     )
 
     if not success:
@@ -570,7 +663,6 @@ def _record_and_transcribe(duration: Optional[int], verbose: bool):
 
     if verbose:
         click.echo(f"✅ {msg}")
-        click.echo()
 
     # Save transcription as record
     storage = Storage()
@@ -582,7 +674,6 @@ def _record_and_transcribe(duration: Optional[int], verbose: bool):
 
     filepath = storage.save(record)
 
-    # Show confirmation
     if verbose:
         click.echo(f"✅ Recorded: {filepath.name}")
     else:
@@ -590,9 +681,8 @@ def _record_and_transcribe(duration: Optional[int], verbose: bool):
 
 
 def _transcribe_audio_file(audio_file_path: str, verbose: bool):
-    """Transcribe an audio file."""
+    """Transcribe an audio file"""
     from .audio import get_audio_transcriber
-    from pathlib import Path
 
     transcriber = get_audio_transcriber()
 
@@ -609,7 +699,7 @@ def _transcribe_audio_file(audio_file_path: str, verbose: bool):
         sys.exit(1)
 
     if verbose:
-        click.echo(f"📝 Transcribing {audio_path.name}...")
+        click.echo(f"Transcribing {audio_path.name}...")
 
     # Transcribe audio (don't clean up - user provided the file)
     success, msg, transcription = transcriber.transcribe(audio_path)
@@ -620,7 +710,6 @@ def _transcribe_audio_file(audio_file_path: str, verbose: bool):
 
     if verbose:
         click.echo(f"✅ {msg}")
-        click.echo()
 
     # Save transcription as record
     storage = Storage()
@@ -632,11 +721,15 @@ def _transcribe_audio_file(audio_file_path: str, verbose: bool):
 
     filepath = storage.save(record)
 
-    # Show confirmation
     if verbose:
         click.echo(f"✅ Recorded: {filepath.name}")
     else:
         click.echo("✓")
+
+
+def main():
+    """Entry point for CLI"""
+    cli()
 
 
 if __name__ == '__main__':
