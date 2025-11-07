@@ -1,387 +1,321 @@
-# diane, — Frictionless Thought Capture
+# diane
 
-> *"Always listening, never interrupting, never forgetting."*
+> *"Diane, 11:30 a.m., February Twenty-fourth..."*
 
-**diane,** is a minimalist CLI tool for capturing thoughts, notes, and reflections with zero friction. Inspired by Agent Cooper's dictation to Diane in Twin Peaks, she operates silently by default — a neutral witness and archivist of your mental ledger.
-
----
-
-## 📚 Documentation
-
-- **[INSTALL.md](INSTALL.md)** — Installation & setup guide
-- **[FEATURES.md](FEATURES.md)** — Complete feature guide with examples
-- **[SEAMLESS.md](SEAMLESS.md)** — Make diane, invisible & everywhere
-- **[scripts/README.md](scripts/README.md)** — Scripts & integrations
-- **[CHANGELOG.md](CHANGELOG.md)** — Version history
+A minimalist CLI for capturing thoughts. Inspired by Agent Cooper's dictation practice.
 
 ---
 
-## ⚡ Quick Start
-
-### Installation
-
-```bash
-# One-line install
-curl -sSL https://raw.githubusercontent.com/USER/diane/main/scripts/install.sh | bash
-
-# Or with pip
-pip install --user diane-cli[all]
-```
-
-### Basic Usage
-
-```bash
-# Silent capture (no output)
-echo "meeting insights" | diane,
-
-# With confirmation
-echo "thoughts on project" | diane, -v
-# ✅ Recorded: 2025-11-06--14-30-15--thoughts-on-project.md
-
-# Interactive mode
-diane,
-# Type your content, press Ctrl-D to save
-
-# Tagged capture
-diane, --tags work/urgent "Need to follow up with client"
-
-# Search records
-diane, --search "meeting"
-diane, --search "meet" --fuzzy  # fuzzy search
-
-# List records
-diane, --list
-diane, --list --today
-
-# Browse with TUI
-diane, --tui
-
-# Statistics
-diane, --stats
-```
-
----
-
-## ✨ Key Features
-
-### v0.2.0 — Current Release
-
-- ✅ **Core Recording** — stdin, pipe, or interactive capture
-- ✅ **Fuzzy Search** — Find records with typo-tolerant matching
-- ✅ **Git Sync** — Push/pull/sync records to GitHub/GitLab
-- ✅ **TUI Dashboard** — Interactive terminal interface
-- ✅ **GPG Encryption** — Protect sensitive records
-- ✅ **Export** — JSON, CSV, HTML, Markdown formats
-- ✅ **Statistics** — Analytics on your recording habits
-- ✅ **Tag-Based Organization** — Hierarchical tagging
-- ✅ **Shell Completions** — Tab completion for bash/zsh/fish
-- ✅ **Ultra-Fast Shortcuts** — 2-character commands (`d`, `dc`, `dl`, etc.)
-- ✅ **Background Sync Daemon** — Auto-sync every N minutes
-- ✅ **Clipboard Monitoring** — Auto-capture clipboard changes
-- ✅ **Editor Integrations** — Vim plugin, VS Code template
-
-### Storage
-
-- Plain Markdown files with YAML frontmatter
-- Stored in `~/.local/share/diane/records/`
-- Automatic Git versioning
-- Portable and future-proof
-
----
-
-## 🎯 Philosophy
-
-diane, embodies:
-
-1. **Silence** — No output by default, true to her character
-2. **Speed** — Capture thoughts in under 1 second
-3. **Simplicity** — Plain text, no databases, no complexity
-4. **Privacy** — Local-first, you control the data
-5. **Reliability** — Git versioning, never lose a thought
-
----
-
-## 🚀 Ultra-Fast Workflow
-
-With the full setup (see [SEAMLESS.md](SEAMLESS.md)):
-
-```bash
-# Install shortcuts (2-character commands!)
-source scripts/quick-capture.sh
-
-# Ultra-minimal capture
-d, "quick thought"              # 2 chars!
-dc                              # capture clipboard
-d,t work "tagged note"          # tagged capture
-
-# Search & browse
-dl                              # list records
-d,f keyword                      # fuzzy search
-dst                             # show stats
-dtui                            # launch TUI
-
-# Sync
-dsync                           # sync with remote
-```
-
-**Result:** Capture anything in **under 1 second**. 80% fewer keystrokes.
-
----
-
-## ⚡ Seamless Auto-Sync
-
-**Zero-friction sync** — your records sync automatically, invisibly, every time you save:
-
-```bash
-# Enable seamless auto-sync
-./scripts/enable-auto-sync.sh
-
-# Now just capture - syncing happens automatically!
-d, "my thought"    # Saved locally in ~16ms
-                  # Synced to GitHub in background (you don't wait)
-                  # Done!
-```
-
-**Features:**
-- 🚀 **Auto-sync on save** — Every record syncs automatically
-- 🔇 **Non-blocking** — Runs in background, doesn't slow you down (~16ms perceived time)
-- 🌐 **Network detection** — Only syncs when online
-- 🎯 **Smart detection** — Only syncs actual changes
-- 🔀 **Auto-conflict resolution** — Your local changes always win
-- ⚡ **218x faster** than manual sync
-
-**See [SYNC.md](SYNC.md) for complete seamless sync guide.**
-
----
-
-## 🔄 Background Sync Daemon
-
-For timed periodic syncing (alternative/complementary to auto-sync):
-
-Never manually sync again:
-
-```bash
-# Linux (systemd)
-systemctl --user enable diane-sync
-systemctl --user start diane-sync
-
-# macOS (launchd)
-launchctl load ~/Library/LaunchAgents/com.diane.sync.plist
-```
-
-Your records sync automatically every 5 minutes (configurable).
-
----
-
-## 🎨 Editor Integration
-
-### Vim
-
-```vim
-" Capture buffer
-:DianeCapture
-
-" Capture selection (visual mode)
-:'<,'>DianeCaptureSelection
-
-" Key mappings
-<leader>dc    " Capture buffer
-<leader>ds    " Capture selection
-<leader>dq    " Quick capture
-<leader>df    " Search
-```
-
-### VS Code (Template Provided)
-
-- Capture document
-- Capture selection
-- Quick capture dialog
-- Search interface
-- Statistics view
-
----
-
-## 📊 Example: Statistics
-
-```bash
-$ diane, --stats
-
-📊 Record Statistics
-────────────────────────────────────────────────────────────
-Total Records: 156
-Total Words: 12,483
-Avg Words/Record: 80.0
-Unique Tags: 23
-
-Busiest Day: 2025-10-15 (18 records)
-
-Top Tags:
-  • work/meetings: 42
-  • dev/python: 31
-  • personal/journal: 24
-  • ideas: 19
-  • bugs: 12
-
-Last 7 Days:
-  2025-10-30: ████ 4
-  2025-10-31: ██████ 6
-  2025-11-01: ███ 3
-  2025-11-02: ████████ 8
-```
-
----
-
-## 🔐 Privacy & Security
-
-- **Local-first** — All records stored locally
-- **No telemetry** — Zero external services
-- **Git encryption** — SSH/HTTPS for sync
-- **GPG encryption** — Optional per-record encryption
-- **You control** — Private GitHub repo, your keys
-
----
-
-## 📤 Export & Integration
-
-```bash
-# Export to JSON
-diane, --export json --export-file records.json
-
-# Beautiful HTML export
-diane, --export html --export-file records.html
-
-# CSV for Excel/Sheets
-diane, --export csv --export-file records.csv
-
-# Process with jq
-diane, --export json | jq '.[] | select(.tags[] | contains("work"))'
-```
-
----
-
-## 🧠 Use Cases
-
-- **Developer notes** — Log bugs, ideas, architecture decisions
-- **Meeting notes** — Quick capture during meetings
-- **Research** — Collect and organize insights
-- **Personal journal** — Daily reflections
-- **Clipboard management** — Auto-capture interesting clips
-- **Learning log** — TIL (Today I Learned) entries
-
----
-
-## 🎭 The diane, Character
-
-Based on Agent Cooper's Twin Peaks dictation style:
-
-> *"Diane, 11:30 a.m., February Twenty-fourth. Entering the town of Twin Peaks..."*
-
-diane, captures this aesthetic:
-- Professional and understated
-- Silent by default
-- Always listening
-- Never interrupting
-- Never forgetting
-
----
-
-## 🛠️ Architecture
-
-```
-diane,
-├── diane/
-│   ├── cli.py           # Command-line interface
-│   ├── config.py        # Configuration management
-│   ├── record.py        # Record data model
-│   ├── storage.py       # Storage & search
-│   ├── sync.py          # Git sync operations
-│   ├── encryption.py    # GPG encryption
-│   ├── export.py        # Export to various formats
-│   ├── stats.py         # Statistics & analytics
-│   └── tui.py           # Terminal UI
-├── scripts/
-│   ├── completions/     # Shell completions
-│   ├── editors/         # Editor integrations
-│   ├── diane-daemon.py  # Background sync
-│   ├── clipboard-monitor.py
-│   └── quick-capture.sh # Ultra-fast shortcuts
-└── tests/               # Test suite
-```
-
----
-
-## 🤝 Contributing
-
-Found a bug? Have a feature idea?
-
-- Report issues on GitHub
-- Submit PRs
-- Share your workflows
-- Contribute integrations
-
----
-
-## 📜 License
-
-MIT License — See [LICENSE](LICENSE)
-
----
-
-## 🌟 Roadmap
-
-**Completed (v0.2.0):**
-- ✅ Fuzzy search
-- ✅ Git sync
-- ✅ TUI dashboard
-- ✅ GPG encryption
-- ✅ Export functionality
-- ✅ Statistics & analytics
-- ✅ Shell completions
-- ✅ Background daemon
-- ✅ Editor integrations
-
-**Planned:**
-- 🎤 Audio capture with speech-to-text
-- 🔌 REST API for agent integration
-- 🧠 Semantic search with embeddings
-- 📱 Mobile app companion
-- 🔗 Browser extension
-
----
-
-## 💎 Core Principles
-
-From [README-original.md](README-original.md):
-
-1. **Frictionless input capture** — Zero barriers to recording
-2. **Neutral witness** — No filtering, no judgment
-3. **Durable storage** — Plain text, Git versioned
-4. **Searchable & auditable** — Find anything instantly
-5. **Privacy first** — Local storage, encrypted sync
-
----
-
-## 🎉 Get Started
+## Quick Start
 
 ```bash
 # Install
-curl -sSL https://raw.githubusercontent.com/USER/diane/main/scripts/install.sh | bash
+pip install diane-cli
 
-# First capture
-echo "My first thought" | diane, -v
+# Install with audio support
+pip install diane-cli[audio]
 
-# View it
-diane, --list
+# Setup (first time)
+diane setup
 
-# See stats
-diane, --stats
+# Capture text (heredoc/pipe)
+diane <<< "quick thought"           # Here-string
+echo "meeting insights" | diane     # Pipe
+diane << EOF                        # Heredoc (multiline)
+Notes from meeting:
+- Timeline discussed
+- Next steps defined
+EOF
 
-# Set up seamless experience
-cat SEAMLESS.md
+# View latest records
+diane                               # Default: show latest
+diane show --limit 20               # Show more
+diane show --today                  # Today only
+
+# Record audio
+diane record                        # Until Ctrl-C
+diane record --duration 30          # 30 seconds
+
+# Search (requires ripgrep + fzf)
+diane search "meeting"
+
+# Sync with remote
+diane sync push
+diane sync pull
 ```
 
 ---
 
-**diane, is ready. Start capturing, effortlessly.** ✨
+## Philosophy
 
-*"Diane, I'm holding in my hand a small box of chocolate bunnies..."* — Agent Cooper
+**diane** follows Unix principles:
+
+- **Do one thing well**: Capture and retrieve thoughts
+- **Compose with other tools**: Clean output when piped (`diane | wc -l`)
+- **Silent unless needed**: Simple `✓` confirmation, detailed with `--verbose`
+- **Plain text storage**: Markdown files with Git versioning
+
+---
+
+## Features
+
+### Core
+
+- **Frictionless capture** — Pipe, args, or interactive
+- **Audio recording** — Record and transcribe
+- **Git versioning** — Automatic commits
+- **Smart defaults** — No args = show latest records
+- **Pipe-friendly** — `timestamp|content` format when piped
+
+### Audio
+
+- **Voice recording** — Dictation via `--record`
+- **Auto-transcription** — OpenAI Whisper API
+- **Audio file support** — Transcribe existing files
+- **Tool auto-detection** — PipeWire, ALSA, or ffmpeg
+- **Temp storage** — Audio preserved if transcription fails
+
+```bash
+# Record until Ctrl-C
+diane --record
+
+# Record for 30 seconds
+diane --record --record-duration 30
+
+# Transcribe existing audio file
+diane --audio-file meeting-recording.mp3
+
+# List available microphones
+diane --list-mics
+```
+
+### Search & Browse
+
+- **Interactive search** — ripgrep + fzf integration
+- **Date filtering** — `--today` flag
+- **TUI dashboard** — `--tui` for terminal UI
+
+### Sync & Export
+
+- **Git remote sync** — Push/pull to GitHub/GitLab
+- **Auto-sync** — Background sync (configurable)
+- **Export** — JSON, CSV, HTML, Markdown
+
+### Statistics
+
+```bash
+diane --stats
+# 📊 Record Statistics
+# Total Records: 156
+# Total Words: 12,847
+# Avg Words/Record: 82.3
+# Busiest Day: 2025-11-03 (23 records)
+```
+
+---
+
+## Usage Examples
+
+```bash
+# Capture text (heredoc - retro Unix style)
+diane <<< "Remember to call client"
+# ✓
+
+# Multiline capture
+diane << EOF
+Project notes from meeting:
+- Timeline: End of quarter
+- Budget: Approved
+- Next: Schedule kickoff
+EOF
+# ✓
+
+# Capture with verbose output
+echo "project notes" | diane -v
+# ✅ Recorded: 2025-11-07--14-30-15--project-notes.md
+
+# View records
+diane show --limit 5
+# ────────────────────────────────────────────────────────────
+# 📅 2025-11-07 14:30
+#
+# Project notes from meeting
+# ────────────────────────────────────────────────────────────
+
+diane show --today
+# Today's records
+
+# Pipe to other tools (clean output)
+diane show --limit 100 | wc -l
+# 100
+
+diane show --today | grep -i "meeting"
+# 2025-11-07 14:30|Meeting with client about project timeline
+
+# Search interactively
+diane search "meeting"
+# [Opens fzf with preview]
+
+# Setup remote sync
+diane setup
+# ... interactive wizard ...
+
+# Sync operations
+diane sync push
+diane sync pull
+diane sync status
+
+# Shortcuts
+diane push                # Same as: diane sync push
+diane pull                # Same as: diane sync pull
+
+# Show configuration
+diane info
+# 📍 diane Configuration
+# Records Directory: /Users/you/.local/share/diane/records
+# Git Enabled:       True
+# Auto-sync:         False
+```
+
+---
+
+## Easter Egg
+
+The comma is a tribute to Twin Peaks. Use it to bypass option parsing:
+
+```bash
+diane , "some text --that --looks like options"
+# Equivalent to: diane -- "some text --that --looks like options"
+```
+
+---
+
+## Storage
+
+Records are stored as plain Markdown files:
+
+```markdown
+---
+timestamp: 2025-11-07 14:30
+sources:
+- stdin
+---
+
+Your thought here
+```
+
+**Location**: `~/.local/share/diane/records/` (or `$DIANE_DATA_HOME/records`)
+
+---
+
+## Dependencies
+
+**Required**:
+- Python ≥ 3.8
+- Git (for versioning)
+
+**For Audio Recording**:
+- One of: `pw-record` (PipeWire), `arecord` (ALSA), or `ffmpeg`
+- OpenAI API key (for transcription)
+- Python package: `pip install diane-cli[audio]`
+
+**For Interactive Search**:
+- `ripgrep` + `fzf` (for interactive search)
+- `bat` (for search preview)
+
+### Install Optional Tools
+
+**macOS**:
+```bash
+brew install ripgrep fzf bat ffmpeg
+```
+
+**Ubuntu/Debian**:
+```bash
+# Audio (choose one)
+apt install pipewire-bin        # PipeWire (modern, recommended)
+apt install alsa-utils          # ALSA (traditional)
+apt install ffmpeg              # ffmpeg (fallback)
+
+# Search
+apt install ripgrep fzf bat
+```
+
+**Audio Setup**:
+```bash
+# Install audio support
+pip install diane-cli[audio]
+
+# Set OpenAI API key
+export OPENAI_API_KEY=sk-...
+
+# Test audio setup
+diane record --list-devices
+```
+
+---
+
+## Help
+
+```bash
+diane --help                    # Main help
+diane show --help               # Command-specific help
+diane sync --help               # Group help
+
+# Beautiful, colorful help menus powered by rich-click
+```
+
+---
+
+## Documentation
+
+- **[CHANGELOG.md](CHANGELOG.md)** — Version history
+- **[LICENSE](LICENSE)** — MIT License
+
+---
+
+## What's New in v0.4.0
+
+**Command-Based Structure** — Better organization and clarity
+
+### New Command Structure
+
+**Text capture** (heredoc/pipe only):
+```bash
+diane <<< "text"              # Here-string (retro Unix style)
+diane << EOF ... EOF           # Heredoc (multiline)
+echo "text" | diane            # Pipe
+```
+
+**Commands** (was: flat flags):
+```bash
+diane show [OPTIONS]           # Was: diane --list
+diane record [OPTIONS]         # Was: diane --record
+diane search [QUERY]           # Was: diane --search
+diane tui                      # Was: diane --tui
+
+diane sync [push|pull|status]  # Was: diane --sync/--push/--pull
+diane export [FORMAT]          # Was: diane --export
+diane stats                    # Was: diane --stats
+diane setup                    # Was: diane --setup
+diane info                     # Was: diane --info
+```
+
+### Benefits
+
+- **Clear intent**: `diane show` vs `diane --list`
+- **Organization**: Related operations grouped (sync)
+- **Discoverable**: Commands clear in help
+- **Scalable**: Easy to add new features
+- **Standard**: Matches modern CLIs (uv, docker, git)
+
+**Breaking Changes**:
+- Removed `diane [TEXT]` argument (use heredoc/pipe instead)
+- All flags converted to commands
+- Convenience aliases provided (`diane push` still works)
+
+---
+
+## License
+
+MIT — See [LICENSE](LICENSE)

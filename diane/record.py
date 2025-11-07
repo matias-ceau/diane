@@ -12,13 +12,11 @@ class Record:
     def __init__(
         self,
         content: str,
-        tags: Optional[List[str]] = None,
         timestamp: Optional[datetime] = None,
         sources: Optional[List[str]] = None,
         audio_file: Optional[str] = None,
     ):
         self.content = content.strip()
-        self.tags = tags or []
         self.timestamp = timestamp or datetime.now()
         self.sources = sources or ["stdin"]
         self.audio_file = audio_file
@@ -27,7 +25,6 @@ class Record:
         """Generate YAML frontmatter for this record."""
         metadata = {
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M'),
-            'tags': self.tags,
             'sources': self.sources,
         }
 
@@ -83,7 +80,6 @@ class Record:
 
                 return cls(
                     content=body,
-                    tags=metadata.get('tags', []),
                     timestamp=timestamp,
                     sources=metadata.get('sources', ['stdin']),
                     audio_file=metadata.get('audio'),

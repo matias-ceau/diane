@@ -1,9 +1,297 @@
 # Changelog
 
-All notable changes to the **diane,** project will be documented in this file.
+All notable changes to the **diane** project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2025-11-07
+
+### 🎯 Command-Based CLI — Better Organization & Clarity
+
+This release introduces a **breaking change** to the CLI structure, moving from flat flags to a modern command-based interface (like `uv`, `docker`, `git`).
+
+### Changed
+
+#### 🎨 Breaking Changes — New Command Structure
+
+**Text Capture** (heredoc/pipe only):
+```bash
+# Old way (REMOVED)
+diane "some text"
+diane --text "some text"
+
+# New way (heredoc - retro Unix style)
+diane <<< "quick thought"           # Here-string
+echo "meeting notes" | diane        # Pipe
+diane << EOF                        # Heredoc (multiline)
+Notes from meeting:
+- Timeline discussed
+EOF
+```
+
+**All Flags Converted to Commands**:
+```bash
+# Old → New
+diane --list              → diane show
+diane --list --today      → diane show --today
+diane --record            → diane record
+diane --search "query"    → diane search "query"
+diane --tui               → diane tui
+diane --sync              → diane sync status
+diane --push              → diane sync push  (or: diane push)
+diane --pull              → diane sync pull  (or: diane pull)
+diane --export json       → diane export json
+diane --stats             → diane stats
+diane --setup             → diane setup
+diane --info              → diane info
+```
+
+**Command Groups**:
+- **`diane sync`** — Now a command group with subcommands:
+  - `diane sync push` — Push records to remote
+  - `diane sync pull` — Pull records from remote
+  - `diane sync status` — Check sync state
+  - `diane sync remote` — Configure remote URL
+
+**Convenience Aliases** (for power users):
+- `diane push` — Same as `diane sync push`
+- `diane pull` — Same as `diane sync pull`
+
+### Added
+
+#### ✨ New Command Structure
+- **Command groups** — Related operations organized together (e.g., `diane sync`)
+- **Subcommands** — Clear hierarchy (`diane sync push` vs flat `--push`)
+- **Better help** — Commands discoverable via `diane --help`
+- **No argument capture** — Removed `diane [TEXT]` argument to avoid parsing conflicts
+
+#### 🎯 Heredoc-First Philosophy
+- **Here-string syntax** — `diane <<< "text"` (elegant, retro Unix style)
+- **Heredoc multiline** — `diane << EOF ... EOF` (no parsing issues)
+- **Pipe-friendly** — `echo "text" | diane` (still works perfectly)
+- **Shell-handled parsing** — Avoids command name clashes and readline issues
+
+### Benefits
+
+- **Clear intent** — `diane show` vs `diane --list`
+- **Organization** — Related operations grouped together
+- **Discoverable** — Commands clear in help menus
+- **Scalable** — Easy to add new features without flag conflicts
+- **Standard** — Matches modern CLI patterns (uv, docker, git)
+
+### Upgrade Notes
+
+**Breaking changes from v0.3.1:**
+
+1. **No more text arguments** — `diane "text"` no longer works
+   - Use heredoc: `diane <<< "text"`
+   - Or pipe: `echo "text" | diane`
+
+2. **All flags now commands**:
+   ```bash
+   # Update your scripts
+   diane --list              → diane show
+   diane --list --today      → diane show --today
+   diane --record            → diane record
+   diane --push              → diane sync push  (or: diane push)
+   ```
+
+3. **Aliases still work** — Shortcuts preserved:
+   - `diane push` → `diane sync push`
+   - `diane pull` → `diane sync pull`
+
+**Migration examples:**
+```bash
+# Old way (v0.3.1)
+diane "quick note"
+diane --list --limit 20
+diane --record --record-duration 30
+diane --push
+
+# New way (v0.4.0)
+diane <<< "quick note"
+diane show --limit 20
+diane record --duration 30
+diane sync push
+# OR: diane push  (alias still works)
+```
+
+### Technical
+
+- **Click command groups** — Refactored from `@click.command()` to `@click.group()`
+- **Invoke without command** — `diane` alone still shows latest records
+- **TTY detection** — Heredoc/pipe input handled automatically
+- **Hidden aliases** — Top-level shortcuts don't clutter help
+
+### Documentation
+
+- **Updated README.md** — All examples updated to command structure
+- **Updated CLI_REFACTOR.md** — Documents reasoning and migration
+- **Updated CHANGELOG.md** — This entry
+
+---
+
+## [0.3.1] - 2025-11-07
+
+### Audio Recording
+
+Dictation support added.
+
+### Added
+
+#### Audio Recording & Transcription
+- **`--record` flag** — Record audio from microphone and auto-transcribe
+- **`--record-duration N`** — Record for N seconds (default: until Ctrl-C)
+- **`--audio-file <path>`** — Transcribe existing audio files
+- **`--list-mics`** — List available audio input devices
+
+#### Auto-Detection System
+- **Automatic tool detection** — Finds available recording tools in priority order:
+  1. `pw-record` (PipeWire) — Modern Linux systems
+  2. `arecord` (ALSA) — Traditional Linux audio
+  3. `ffmpeg` — Universal fallback
+- **Smart error messages** — Tells you what to install if no tool found
+
+#### Transcription
+- **OpenAI Whisper API integration** — Accurate speech-to-text
+- **Multiple audio formats** — WAV, MP3, M4A, etc.
+- **Automatic cleanup** — Deletes audio file after successful transcription
+- **Failure handling** — Keeps audio in `/tmp` if transcription fails
+
+#### Storage
+- **Temp audio directory** — `/tmp/diane-audio/` (configurable via `$DIANE_AUDIO_TEMP`)
+- **Unique filenames** — `diane-recording-YYYYMMDD-HHMMSS.wav`
+- **Audio metadata** — Records include `audio_file` path in frontmatter
+
+### Technical
+
+- **New module**: `diane/audio.py` with `AudioRecorder` and `AudioTranscriber` classes
+- **Optional dependency**: `openai >= 1.0` for transcription
+- **Install option**: `pip install diane-cli[audio]`
+- **Environment variables**:
+  - `OPENAI_API_KEY` — Required for transcription
+  - `DIANE_AUDIO_TEMP` — Custom temp directory (default: `/tmp/diane-audio`)
+  - `DIANE_TRANSCRIBE_MODEL` — Override model (default: `gpt-4o-audio-preview`)
+
+### Documentation
+
+- Updated README.md with audio features section
+- Added audio examples to CLI help
+- Added audio dependencies to install instructions
+- Created setup guide for audio configuration
+
+### Usage Examples
+
+```bash
+# Record audio dictation
+diane --record
+# Recording until Ctrl-C...
+# ✓
+
+# Record for 30 seconds
+diane --record --record-duration 30
+
+# Transcribe existing audio file
+diane --audio-file meeting.mp3
+
+# Check available microphones
+diane --list-mics
+```
+
+---
+
+## [0.3.0] - 2025-11-07
+
+### 🎯 Major Refactor — Simplified & Unix-Friendly
+
+This release represents a major refactor toward Unix philosophy and simplicity.
+
+### Added
+
+#### ✨ New Features
+- **Default behavior shows records** — `diane` with no arguments now shows latest records (no more `--list` needed)
+- **Pipe-friendly output** — Clean `timestamp|content` format when output is piped (Unix composability)
+- **Rich help menus** — Beautiful, colorful help powered by `rich-click`
+- **First-run setup wizard** — `diane --setup` guides initial configuration
+- **Info command** — `diane --info` or `diane --path` shows configuration and paths
+- **Comma easter egg** — `diane , "text"` works like `diane -- "text"` (Twin Peaks tribute)
+- **Simple confirmations** — Default `✓` confirmation, detailed output with `--verbose`
+
+#### 🔍 Enhanced Search
+- **ripgrep + fzf integration** — Interactive search with live preview (replaces custom fuzzy search)
+- Requires `rg` and `fzf` installed, provides much better search experience
+
+### Changed
+
+#### 🎨 Breaking Changes
+- **Removed tags** — Simplified capture, no more `--tags` option or tag metadata
+- **Removed local encryption** — No more `--encrypt` flag (encryption moved to future remote-sync layer)
+- **Removed `-s` short flag** — Only `--search` (avoid conflicts with other CLI tools)
+- **Changed default behavior** — `diane` now shows records instead of waiting for input
+- **Removed `diane,` command** — Only `diane` command (comma is easter egg only)
+
+#### ⚡ Improvements
+- **Faster, cleaner output** — No decorative elements when piped to other tools
+- **Better Unix integration** — `diane | wc -l` counts actual records, not UI elements
+- **Simpler data model** — Records only have timestamp, sources, and content
+- **Cleaner help** — Organized, colorful help menu with better descriptions
+
+### Removed
+
+- Tag functionality (`--tags`, tag display, tag statistics)
+- Local GPG encryption (`--encrypt`, `--decrypt`, `--gpg-*` commands)
+- Custom fuzzy search (replaced by ripgrep + fzf)
+- `-s` short flag for search
+- `--list` flag (default behavior now)
+- `diane,` command alias
+
+### Dependencies
+
+- **Added**: `rich-click >= 1.7` for beautiful help menus
+- **Removed**: Direct `rich` dependency (included via rich-click)
+
+### Documentation
+
+- **Completely rewritten README.md** — Focused on Unix philosophy and simplicity
+- **New ROADMAP.md** — Vision for AI-powered processing layer (Layer 2)
+- **Updated CHANGELOG.md** — This file
+
+### Philosophy
+
+This release refocuses **diane** on its core purpose:
+
+> "Do one thing well: capture and retrieve thoughts"
+
+The tool now follows Unix principles strictly:
+- Clean, parseable output when piped
+- Silent unless needed
+- Composes with other CLI tools
+- Plain text, no lock-in
+
+### Upgrade Notes
+
+**Breaking changes from v0.2.0:**
+
+1. **Tags removed** — Old records with tags will still work (tags in frontmatter are ignored)
+2. **Encrypted files** — Any `.gpg` files won't be read automatically (decrypt manually if needed)
+3. **Command changes**:
+   - `diane, --list` → `diane`
+   - `diane, --search query` → `diane --search query`
+   - `diane, --tags work "note"` → `diane "note"` (tags not supported)
+
+**Migration:**
+```bash
+# Old way
+diane, --list --today
+diane, --tags work "my note"
+
+# New way
+diane --today
+diane "my note"
+```
+
+---
 
 ## [0.2.0] - 2025-11-06
 

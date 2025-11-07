@@ -60,36 +60,20 @@ class Storage:
                     # Git not available or failed, continue without it
                     config.use_git = False
 
-    def save(self, record: Record, encrypt: bool = False) -> Path:
+    def save(self, record: Record) -> Path:
         """Save a record to storage.
 
         Args:
             record: The record to save
-            encrypt: Whether to encrypt the file with GPG
 
         Returns:
             Path to the saved file
         """
         filepath = record.get_filename(self.records_dir)
 
-        # Write the record
+        # Write the record (always unencrypted locally)
         content = record.to_markdown()
-
-        if encrypt:
-            # Encrypt with GPG
-            encryptor = GPGEncryption()
-            if not encryptor.is_available():
-                # Fall back to unencrypted if GPG not available
-                filepath.write_text(content, encoding='utf-8')
-            else:
-                # Write unencrypted first, then encrypt in place
-                filepath.write_text(content, encoding='utf-8')
-                success, msg = encryptor.encrypt_file(filepath)
-                if success:
-                    # Update filepath to encrypted version
-                    filepath = filepath.with_suffix(filepath.suffix + '.gpg')
-        else:
-            filepath.write_text(content, encoding='utf-8')
+        filepath.write_text(content, encoding='utf-8')
 
         # Git commit if enabled
         if config.use_git:
@@ -135,14 +119,12 @@ class Storage:
         self,
         limit: Optional[int] = None,
         since: Optional[datetime] = None,
-        tags: Optional[List[str]] = None,
     ) -> List[Record]:
         """List records from storage.
 
         Args:
             limit: Maximum number of records to return
             since: Only return records after this time
-            tags: Only return records with these tags
 
         Returns:
             List of Record objects
@@ -157,10 +139,6 @@ class Storage:
                 # Apply filters
                 if since and record.timestamp < since:
                     continue
-
-                if tags:
-                    if not any(tag in record.tags for tag in tags):
-                        continue
 
                 records.append(record)
 
