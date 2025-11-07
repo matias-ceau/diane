@@ -5,6 +5,133 @@ All notable changes to the **diane** project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-11-07
+
+### 🎯 Command-Based CLI — Better Organization & Clarity
+
+This release introduces a **breaking change** to the CLI structure, moving from flat flags to a modern command-based interface (like `uv`, `docker`, `git`).
+
+### Changed
+
+#### 🎨 Breaking Changes — New Command Structure
+
+**Text Capture** (heredoc/pipe only):
+```bash
+# Old way (REMOVED)
+diane "some text"
+diane --text "some text"
+
+# New way (heredoc - retro Unix style)
+diane <<< "quick thought"           # Here-string
+echo "meeting notes" | diane        # Pipe
+diane << EOF                        # Heredoc (multiline)
+Notes from meeting:
+- Timeline discussed
+EOF
+```
+
+**All Flags Converted to Commands**:
+```bash
+# Old → New
+diane --list              → diane show
+diane --list --today      → diane show --today
+diane --record            → diane record
+diane --search "query"    → diane search "query"
+diane --tui               → diane tui
+diane --sync              → diane sync status
+diane --push              → diane sync push  (or: diane push)
+diane --pull              → diane sync pull  (or: diane pull)
+diane --export json       → diane export json
+diane --stats             → diane stats
+diane --setup             → diane setup
+diane --info              → diane info
+```
+
+**Command Groups**:
+- **`diane sync`** — Now a command group with subcommands:
+  - `diane sync push` — Push records to remote
+  - `diane sync pull` — Pull records from remote
+  - `diane sync status` — Check sync state
+  - `diane sync remote` — Configure remote URL
+
+**Convenience Aliases** (for power users):
+- `diane push` — Same as `diane sync push`
+- `diane pull` — Same as `diane sync pull`
+
+### Added
+
+#### ✨ New Command Structure
+- **Command groups** — Related operations organized together (e.g., `diane sync`)
+- **Subcommands** — Clear hierarchy (`diane sync push` vs flat `--push`)
+- **Better help** — Commands discoverable via `diane --help`
+- **No argument capture** — Removed `diane [TEXT]` argument to avoid parsing conflicts
+
+#### 🎯 Heredoc-First Philosophy
+- **Here-string syntax** — `diane <<< "text"` (elegant, retro Unix style)
+- **Heredoc multiline** — `diane << EOF ... EOF` (no parsing issues)
+- **Pipe-friendly** — `echo "text" | diane` (still works perfectly)
+- **Shell-handled parsing** — Avoids command name clashes and readline issues
+
+### Benefits
+
+- **Clear intent** — `diane show` vs `diane --list`
+- **Organization** — Related operations grouped together
+- **Discoverable** — Commands clear in help menus
+- **Scalable** — Easy to add new features without flag conflicts
+- **Standard** — Matches modern CLI patterns (uv, docker, git)
+
+### Upgrade Notes
+
+**Breaking changes from v0.3.1:**
+
+1. **No more text arguments** — `diane "text"` no longer works
+   - Use heredoc: `diane <<< "text"`
+   - Or pipe: `echo "text" | diane`
+
+2. **All flags now commands**:
+   ```bash
+   # Update your scripts
+   diane --list              → diane show
+   diane --list --today      → diane show --today
+   diane --record            → diane record
+   diane --push              → diane sync push  (or: diane push)
+   ```
+
+3. **Aliases still work** — Shortcuts preserved:
+   - `diane push` → `diane sync push`
+   - `diane pull` → `diane sync pull`
+
+**Migration examples:**
+```bash
+# Old way (v0.3.1)
+diane "quick note"
+diane --list --limit 20
+diane --record --record-duration 30
+diane --push
+
+# New way (v0.4.0)
+diane <<< "quick note"
+diane show --limit 20
+diane record --duration 30
+diane sync push
+# OR: diane push  (alias still works)
+```
+
+### Technical
+
+- **Click command groups** — Refactored from `@click.command()` to `@click.group()`
+- **Invoke without command** — `diane` alone still shows latest records
+- **TTY detection** — Heredoc/pipe input handled automatically
+- **Hidden aliases** — Top-level shortcuts don't clutter help
+
+### Documentation
+
+- **Updated README.md** — All examples updated to command structure
+- **Updated CLI_REFACTOR.md** — Documents reasoning and migration
+- **Updated CHANGELOG.md** — This entry
+
+---
+
 ## [0.3.1] - 2025-11-07
 
 ### Audio Recording
